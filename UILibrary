@@ -81,6 +81,7 @@ local selectedTab
 
 Library._promptExists = false
 Library._colorPickerExists = false
+Library._closeNotificationShown = false
 
 local GlobalTweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
 
@@ -571,7 +572,16 @@ function Library:create(options)
 	end
 
 	closeButton.MouseButton1Click:connect(function()
-		closeUI()
+		Library:show(false)
+		if not Library._closeNotificationShown then
+			Library._closeNotificationShown = true
+			local toggleKeyName = tostring(Library.ToggleKey):match("Enum%.KeyCode%.(.+)")
+			Library:notification({
+				Title = "UI Minimized",
+				Text = "You may open the UI again using the " .. toggleKeyName .. " key.",
+				Duration = 5
+			})
+		end
 	end)
 
 	local urlBar = core:object("Frame", {
