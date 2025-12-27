@@ -82,6 +82,7 @@ local selectedTab
 Library._promptExists = false
 Library._colorPickerExists = false
 Library._closeNotificationShown = false
+Library._promptDarkener = nil
 
 local GlobalTweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
 
@@ -345,13 +346,19 @@ function Library:show(state)
 	self.Toggled = state
 	self.mainFrame.ClipsDescendants = true
 	if state then
+		if Library._promptDarkener then
+			Library._promptDarkener.Visible = true
+		end
 		self.mainFrame:tween({Size = self.mainFrame.oldSize, Length = 0.25}, function()
 			rawset(self.mainFrame, "oldSize", (state and self.mainFrame.oldSize) or self.mainFrame.Size)
 			self.mainFrame.ClipsDescendants = false
 		end)
 		wait(0.15)
 		self.mainFrame:fade(not state, self.mainFrame.BackgroundColor3, 0.15)
-	else		
+	else
+		if Library._promptDarkener then
+			Library._promptDarkener.Visible = false
+		end
 		self.mainFrame:fade(not state, self.mainFrame.BackgroundColor3, 0.15)
 		wait(0.1)
 		self.mainFrame:tween{Size = UDim2.new(), Length = 0.25}
@@ -3124,6 +3131,8 @@ function Library:prompt(options)
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1)
 	}):round(10)
+	
+	Library._promptDarkener = darkener.AbsoluteObject
 
 	local promptContainer = darkener:object("Frame", {
 		Theme = {BackgroundColor3 = "Main"},
@@ -3244,6 +3253,7 @@ function Library:prompt(options)
 					b:tween({TextTransparency = 1, BackgroundTransparency = 1, Length = 0.1})
 				end
 				darkener:tween({BackgroundTransparency = 1, Length = 0.1}, function()
+					Library._promptDarkener = nil
 					darkener.AbsoluteObject:Destroy()
 					task.delay(0.25, function()
 						Library._promptExists = false
