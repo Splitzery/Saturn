@@ -571,19 +571,6 @@ function Library:create(options)
 		getgenv().MercuryUI = closeUI
 	end
 
-	closeButton.MouseButton1Click:connect(function()
-		Library:show(false)
-		if not Library._closeNotificationShown then
-			Library._closeNotificationShown = true
-			local toggleKeyName = tostring(Library.ToggleKey):match("Enum%.KeyCode%.(.+)")
-			Library:notification({
-				Title = "UI Minimized",
-				Text = "You may open the UI again using the " .. toggleKeyName .. " key.",
-				Duration = 5
-			})
-		end
-	end)
-
 	local urlBar = core:object("Frame", {
 		Size = UDim2.new(1, -10, 0, 25),
 		Position = UDim2.new(0, 5,0, 35),
@@ -861,6 +848,19 @@ function Library:create(options)
 		homePage = homePage,
 		nilFolder = core:object("Folder"),
 	}, Library)
+
+	closeButton.MouseButton1Click:connect(function()
+		Library:show(false)
+		if not Library._closeNotificationShown then
+			Library._closeNotificationShown = true
+			local toggleKeyName = tostring(Library.ToggleKey):match("Enum%.KeyCode%.(.+)")
+			mt:notification({
+				Title = "UI Minimized",
+				Text = "You may open the UI again using the " .. toggleKeyName .. " key.",
+				Duration = 5
+			})
+		end
+	end)
 
 	local settingsTab = Library.tab(mt, {
 		Name = "Settings",
