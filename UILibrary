@@ -853,7 +853,8 @@ function Library:create(options)
 		Library:show(false)
 		if not Library._closeNotificationShown then
 			Library._closeNotificationShown = true
-			local toggleKeyName = tostring(Library.ToggleKey):match("Enum%.KeyCode%.(.+)")
+			local currentKey = mt.toggleKeybind and mt.toggleKeybind:Get() or Library.ToggleKey
+			local toggleKeyName = tostring(currentKey):match("Enum%.KeyCode%.(.+)") or tostring(currentKey.Name)
 			mt:notification({
 				Title = "UI Minimized",
 				Text = "You may open the UI again using the " .. toggleKeyName .. " key.",
@@ -870,7 +871,7 @@ function Library:create(options)
 
 	settingsTab:_theme_selector()
 
-	settingsTab:keybind{
+	local toggleKeybind = settingsTab:keybind{
 		Name = "Toggle Key",
 		Description = "Key to show/hide the UI.",
 		Keybind = Enum.KeyCode.Delete,
@@ -879,6 +880,7 @@ function Library:create(options)
 			Library:show(self.Toggled)
 		end,
 	}
+	mt.toggleKeybind = toggleKeybind
 
 	settingsTab:toggle{
 		Name = "Lock Dragging",
@@ -3089,6 +3091,10 @@ function Library:keybind(options)
 		options.Keybind = keycode
 		keybindDisplay.Text = (options.Keybind and tostring(options.Keybind.Name):upper()) or "?"
 		keybindDisplay:tween{Size = UDim2.fromOffset(keybindDisplay.TextBounds.X + 20, 20), Length = 0.05}
+	end
+
+	function methods:Get()
+		return options.Keybind
 	end
 
 	return methods
