@@ -84,6 +84,7 @@ Library._colorPickerExists = false
 Library._closeNotificationShown = false
 Library._promptDarkener = nil
 Library._isAnimating = false
+Library._pendingToggle = nil
 
 local GlobalTweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
 
@@ -344,8 +345,12 @@ function Library:object(class, properties)
 end
 
 function Library:show(state)
-	if Library._isAnimating then return end
+	if Library._isAnimating then
+		Library._pendingToggle = state
+		return
+	end
 	Library._isAnimating = true
+	Library._pendingToggle = nil
 	
 	self.Toggled = state
 	self.mainFrame.ClipsDescendants = true
@@ -357,6 +362,9 @@ function Library:show(state)
 			rawset(self.mainFrame, "oldSize", (state and self.mainFrame.oldSize) or self.mainFrame.Size)
 			self.mainFrame.ClipsDescendants = false
 			Library._isAnimating = false
+			if Library._pendingToggle ~= nil and Library._pendingToggle ~= state then
+				Library:show(Library._pendingToggle)
+			end
 		end)
 		wait(0.15)
 		self.mainFrame:fade(not state, self.mainFrame.BackgroundColor3, 0.15)
@@ -368,6 +376,9 @@ function Library:show(state)
 		wait(0.1)
 		self.mainFrame:tween({Size = UDim2.new(), Length = 0.25}, function()
 			Library._isAnimating = false
+			if Library._pendingToggle ~= nil and Library._pendingToggle ~= state then
+				Library:show(Library._pendingToggle)
+			end
 		end)
 	end
 end
