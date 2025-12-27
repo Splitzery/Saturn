@@ -7,6 +7,7 @@ local Mouse = LocalPlayer:GetMouse()
 local HTTPService = game:GetService("HttpService")
 
 local Library = {
+	ThemeOrder = {"Saturn", "Legacy", "Serika", "Dark", "Rust", "Aqua", "Vaporwave", "OperaGX", "VisualStudio"},
 	Themes = {
 		Saturn = {
 			Main = Color3.fromRGB(20, 20, 25),
@@ -2894,7 +2895,10 @@ function Library:_theme_selector()
 		PaddingTop = UDim.new(0, 5)
 	})
 
-	for themeName, themeColors in next, Library.Themes do
+	for _, themeName in ipairs(Library.ThemeOrder) do
+		local themeColors = Library.Themes[themeName]
+		if not themeColors then continue end
+		
 		local count = 0
 
 		for _, color in next, themeColors do
