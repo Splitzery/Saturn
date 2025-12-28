@@ -890,13 +890,15 @@ function Library:create(options)
 	local keyScreen = content:object("Frame", {
 		Theme = {BackgroundColor3 = "Secondary"},
 		Size = UDim2.fromScale(1, 1),
-		ZIndex = 10
+		BackgroundTransparency = 0.8,
+		ZIndex = 100
 	})
 
 	local keyContainer = keyScreen:object("Frame", {
 		Theme = {BackgroundColor3 = "Main"},
 		Centered = true,
-		Size = UDim2.fromOffset(350, 200)
+		Size = UDim2.fromOffset(350, 200),
+		ZIndex = 101
 	}):round(8)
 
 	local keyTitle = keyContainer:object("TextLabel", {
@@ -907,7 +909,8 @@ function Library:create(options)
 		TextSize = 24,
 		Font = Enum.Font.SourceSansBold,
 		Theme = {TextColor3 = "Tertiary"},
-		TextXAlignment = Enum.TextXAlignment.Center
+		TextXAlignment = Enum.TextXAlignment.Center,
+		ZIndex = 102
 	})
 
 	local keyTextBox = keyContainer:object("TextBox", {
@@ -922,7 +925,8 @@ function Library:create(options)
 		TextSize = 14,
 		PlaceholderText = "Enter your key here...",
 		Text = "",
-		ClearTextOnFocus = false
+		ClearTextOnFocus = false,
+		ZIndex = 102
 	}):round(6):stroke("Tertiary")
 
 	local keyButton = keyContainer:object("TextButton", {
@@ -933,7 +937,8 @@ function Library:create(options)
 		Text = "Submit",
 		TextSize = 16,
 		Font = Enum.Font.SourceSansBold,
-		TextColor3 = Color3.fromRGB(255, 255, 255)
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		ZIndex = 102
 	}):round(6)
 
 	local keyStatusLabel = keyContainer:object("TextLabel", {
@@ -944,7 +949,8 @@ function Library:create(options)
 		Text = "",
 		TextSize = 12,
 		Theme = {TextColor3 = "WeakText"},
-		TextXAlignment = Enum.TextXAlignment.Center
+		TextXAlignment = Enum.TextXAlignment.Center,
+		ZIndex = 102
 	})
 
 	do
