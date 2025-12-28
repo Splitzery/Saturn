@@ -426,17 +426,19 @@ function Library:create(options)
 	if readfile and writefile and isfile then
 		if not isfile("SaturnSettings.json") then
 			writefile("SaturnSettings.json", HTTPService:JSONEncode(settings))
+		else
+			settings = HTTPService:JSONDecode(readfile("SaturnSettings.json"))
 		end
-		settings = HTTPService:JSONDecode(readfile("SaturnSettings.json"))
 		if not settings.Theme then
 			settings.Theme = "Saturn"
 		end
-		Library.CurrentTheme = Library.Themes[settings.Theme]
 		updateSettings = function(property, value)
 			settings[property] = value
 			writefile("SaturnSettings.json", HTTPService:JSONEncode(settings))
 		end
 	end
+	
+	Library.CurrentTheme = Library.Themes[settings.Theme]
 
 	options = self:set_defaults({
 		Name = "Saturn",
