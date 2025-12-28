@@ -709,12 +709,13 @@ function Library:create(options)
 
 	-- Rainbow animation for Saturn logo and all tab icons
 	Library.rainbowHue = 0
-	table.insert(mt.rainbowIcons, homeButtonIcon)
+	Library.rainbowIcons = Library.rainbowIcons or {}
+	table.insert(Library.rainbowIcons, homeButtonIcon)
 	task.spawn(function()
 		while homeButtonIcon.AbsoluteObject do
 			Library.rainbowHue = (Library.rainbowHue + 0.005) % 1
 			local color = Color3.fromHSV(Library.rainbowHue, 1, 1)
-			for _, icon in ipairs(mt.rainbowIcons) do
+			for _, icon in ipairs(Library.rainbowIcons) do
 				if icon and icon.AbsoluteObject then
 					icon:tween({
 						ImageColor3 = color,
@@ -1478,7 +1479,8 @@ function Library:tab(options)
 	})
 	
 	-- Add tab icon to rainbow animation
-	table.insert(self.rainbowIcons or {}, tabButtonIcon)
+	Library.rainbowIcons = Library.rainbowIcons or {}
+	table.insert(Library.rainbowIcons, tabButtonIcon)
 
 	local tabButtonClose = tabButton:object("ImageButton", {
 		AnchorPoint = Vector2.new(1, 0.5),
