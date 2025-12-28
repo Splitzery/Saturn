@@ -905,6 +905,7 @@ function Library:create(options)
 	
 	-- Set key lock flag on Library object
 	Library.keyLocked = true
+	Library.keyTabRemoved = false
 
 	-- Create Key Tab
 	local keyTab = Library.tab(mt, {
@@ -1010,6 +1011,7 @@ function Library:create(options)
 			elseif enteredKey == "Colin" then
 				-- Correct key - Close key tab and enable everything
 				Library.keyLocked = false
+				Library.keyTabRemoved = true
 				for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
 					if tabButton:IsA("TextButton") and tabButton ~= keyTabButton then
 						tabButton.Visible = true
@@ -1040,7 +1042,7 @@ function Library:create(options)
 				-- Incorrect key
 				mt:notification({
 					Title = "Invalid Key",
-					Text = "The key you entered is incorrect",
+					Text = "The key you entered is incorrect.",
 					Duration = 3
 				})
 			end
@@ -1416,6 +1418,15 @@ function Library:tab(options)
 			if not tabButton.Active then return end
 			-- Prevent any tab switching if UI is key locked
 			if Library.keyLocked then return end
+			-- Check if this tab still exists in Tabs array (prevents showing removed Key tab)
+			local tabExists = false
+			for _, tabInfo in next, self.Tabs do
+				if tabInfo[1] == tab then
+					tabExists = true
+					break
+				end
+			end
+			if not tabExists then return end
 			if not tabButton.Visible then
 				tabButton.Parent = self.navigation.AbsoluteObject
 				tabButton.Size = UDim2.new(0, 50, tabButton.Size.Y.Scale, tabButton.Size.Y.Offset)
