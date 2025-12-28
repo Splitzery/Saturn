@@ -25,6 +25,48 @@ local function getSafeParent()
 	return CoreGui
 end
 
+-- Ping spoofing to avoid alt detection
+local spoofedPing = math.random(20, 80)
+local function setupPingSpoofing(minPing, maxPing)
+	if not getrawmetatable or not setreadonly or not newcclosure or not checkcaller then
+		return false
+	end
+	
+	local success = pcall(function()
+		local mt = getrawmetatable(game)
+		local oldNamecall = mt.__namecall
+		local oldIndex = mt.__index
+		
+		setreadonly(mt, false)
+		
+		-- Hook __index to spoof ping readings
+		mt.__index = newcclosure(function(t, k)
+			if not checkcaller() then
+				-- Anti-cheat is reading, return spoofed ping
+				if typeof(t) == "Instance" and k == "Value" then
+					local name = tostring(t)
+					if name:find("Ping") or name:find("ping") then
+						return spoofedPing
+					end
+				end
+			end
+			return oldIndex(t, k)
+		end)
+		
+		setreadonly(mt, true)
+		
+		-- Randomize ping periodically (every 5-15 seconds)
+		task.spawn(function()
+			while true do
+				wait(math.random(5, 15))
+				spoofedPing = math.random(minPing, maxPing)
+			end
+		end)
+	end)
+	
+	return success
+end
+
 local Library = {
 	ThemeOrder = {"Saturn", "Legacy", "Serika", "Dark", "Rust", "Aqua"},
 	Themes = {
@@ -33,7 +75,7 @@ local Library = {
 			Secondary = Color3.fromRGB(35, 35, 40),
 			Tertiary = Color3.fromRGB(161, 3, 252),
 
-			StrongText = Color3.fromHSV(0, 0, 1),        
+			StrongText = Color3.fromHSV(0, 0, 1),
 			WeakText = Color3.fromHSV(0, 0, 172/255)
 		},
 		Legacy = {
@@ -476,8 +518,18 @@ function Library:create(options)
 		Link = "https://github.com/splitzery/saturn",
 		UseKeySystem = false,
 		KeySystemKey = "Colin",
-		SupportedGames = {}  -- Empty table = all games allowed. Add PlaceIds to restrict: {123456, 789012}
+		SupportedGames = {},  -- Empty table = all games allowed. Add PlaceIds to restrict: {123456, 789012}
+		SpoofPing = false,  -- Set to true to randomize ping to avoid alt detection
+		PingRange = {20, 80}  -- Min and max ping values for spoofing
 	}, options)
+	
+	-- Setup ping spoofing if enabled
+	if options.SpoofPing then
+		local success = setupPingSpoofing(options.PingRange[1], options.PingRange[2])
+		if not success then
+			warn("[Saturn] Ping spoofing failed - executor may not support required functions")
+		end
+	end
 
 	-- Check if current game is supported
 	if #options.SupportedGames > 0 then
