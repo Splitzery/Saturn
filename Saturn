@@ -1,7 +1,6 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Splitzery/Saturn/refs/heads/main/UILibrary"))()
 
 local gui = Library:create{
-    Theme = Library.Themes.Saturn
 }
 
 local tab = gui:tab{

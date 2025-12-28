@@ -7,7 +7,7 @@ local Mouse = LocalPlayer:GetMouse()
 local HTTPService = game:GetService("HttpService")
 
 local Library = {
-	ThemeOrder = {"Saturn", "Legacy", "Serika", "Dark", "Rust", "Aqua", "Vaporwave", "OperaGX", "VisualStudio"},
+	ThemeOrder = {"Saturn", "Legacy", "Serika", "Dark", "Rust", "Aqua"},
 	Themes = {
 		Saturn = {
 			Main = Color3.fromRGB(20, 20, 25),
@@ -48,10 +48,7 @@ local Library = {
 
 			StrongText = Color3.fromHSV(0, 0, 1),		
 			WeakText = Color3.fromHSV(0, 0, 172/255)
-		},
-		Vaporwave = {},
-		OperaGX = {},
-		VisualStudio = {}
+		}
 	},
 	ColorPickerStyles = {
 		Legacy = 0,
@@ -457,7 +454,7 @@ function Library:create(options)
 		Name = "Saturn",
 		Size = UDim2.fromOffset(600, 400),
 		Theme = self.Themes[settings.Theme],
-		Link = "https://github.com/saturn"
+		Link = "https://github.com/splitzery/saturn"
 	}, options)
 
 	if getgenv and getgenv().SaturnUI then
@@ -707,9 +704,21 @@ function Library:create(options)
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0, 5, 0.5, 0),
 		Size = UDim2.new(0, 15, 0, 15),
-		Image = "rbxassetid://114141740157700",
-		Theme = {ImageColor3 = "StrongText"}
+		Image = "rbxassetid://114141740157700"
 	})
+
+	-- Rainbow animation for Saturn logo
+	task.spawn(function()
+		local hue = 0
+		while homeButtonIcon.AbsoluteObject do
+			hue = (hue + 0.005) % 1
+			homeButtonIcon:tween({
+				ImageColor3 = Color3.fromHSV(hue, 1, 1),
+				Length = 0.1
+			})
+			wait(0.1)
+		end
+	end)
 
 	local homePage = content:object("Frame", {
 		Size = UDim2.fromScale(1, 1),
