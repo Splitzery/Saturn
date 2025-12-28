@@ -910,6 +910,13 @@ function Library:create(options)
 	-- Store reference to key tab button from Tabs array
 	local keyTabButton = mt.Tabs[#mt.Tabs][2]
 	
+	-- Hide the close button on the Key tab
+	for _, child in next, keyTabButton.AbsoluteObject:GetChildren() do
+		if child:IsA("ImageButton") then
+			child.Visible = false
+		end
+	end
+	
 	-- Disable scrolling on key tab
 	keyTab.container.ScrollingEnabled = false
 	keyTab.container.CanvasSize = UDim2.fromScale(1, 1)
@@ -1024,8 +1031,10 @@ function Library:create(options)
 	end
 
 	-- Show all tabs including Key tab, but make non-Key tabs non-clickable initially
+	keyTabButton.Parent = mt.navigation.AbsoluteObject
 	keyTabButton.Visible = true
 	keyTabButton.Active = true
+	keyTabButton.BackgroundTransparency = 0.15
 	for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
 		if tabButton:IsA("TextButton") and tabButton ~= keyTabButton then
 			tabButton.Visible = true
