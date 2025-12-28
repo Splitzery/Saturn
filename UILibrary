@@ -720,6 +720,27 @@ function Library:create(options)
 		end
 	end)
 
+	-- Purple gradient animation for Saturn theme Tertiary color
+	task.spawn(function()
+		local purpleShades = {
+			Color3.fromRGB(161, 3, 252),   -- Bright purple (base)
+			Color3.fromRGB(180, 50, 255),  -- Lighter purple
+			Color3.fromRGB(140, 20, 220),  -- Darker purple
+			Color3.fromRGB(200, 80, 255),  -- Very light purple
+			Color3.fromRGB(120, 0, 200)    -- Deep purple
+		}
+		local index = 1
+		while true do
+			if Library.CurrentTheme == Library.Themes.Saturn then
+				local nextIndex = (index % #purpleShades) + 1
+				Library.Themes.Saturn.Tertiary = purpleShades[index]
+				Library:updateThemeColor("Tertiary", purpleShades[index])
+				index = nextIndex
+			end
+			wait(2)
+		end
+	end)
+
 	local homePage = content:object("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		Centered = true,
