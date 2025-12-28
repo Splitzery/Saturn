@@ -910,23 +910,13 @@ function Library:create(options)
 	-- Store reference to key tab button from Tabs array
 	local keyTabButton = mt.Tabs[#mt.Tabs][2]
 	
-	-- Disable scrolling on key tab and configure for centered content
+	-- Disable scrolling on key tab
 	keyTab.container.ScrollingEnabled = false
 	keyTab.container.CanvasSize = UDim2.fromScale(1, 1)
-	
-	-- Remove UIListLayout to allow absolute positioning
-	for _, child in next, keyTab.container.AbsoluteObject:GetChildren() do
-		if child:IsA("UIListLayout") then
-			child:Destroy()
-		end
-	end
 
 	local keyTabContainer = keyTab.container:object("Frame", {
 		Theme = {BackgroundColor3 = "Main"},
-		Position = UDim2.fromScale(0.5, 0.5),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Size = UDim2.fromOffset(350, 200),
-		ZIndex = 10
+		Size = UDim2.fromOffset(350, 200)
 	}):round(8)
 
 	local keyTitle = keyTabContainer:object("TextLabel", {
