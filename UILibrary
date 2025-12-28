@@ -920,6 +920,13 @@ function Library:create(options)
 	-- Disable scrolling on key tab
 	keyTab.container.ScrollingEnabled = false
 	keyTab.container.CanvasSize = UDim2.fromScale(1, 1)
+	
+	-- Add extra top padding to vertically center the key form
+	for _, child in next, keyTab.container.AbsoluteObject:GetChildren() do
+		if child:IsA("UIPadding") then
+			child.PaddingTop = UDim.new(0, 80)
+		end
+	end
 
 	local keyTabContainer = keyTab.container:object("Frame", {
 		Theme = {BackgroundColor3 = "Main"},
