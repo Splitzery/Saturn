@@ -67,6 +67,48 @@ local function setupPingSpoofing(minPing, maxPing)
 	return success
 end
 
+-- Output detection bypass
+local function setupOutputProtection()
+	if not hookfunction or not newcclosure or not checkcaller then
+		return false
+	end
+	
+	local success = pcall(function()
+		local oldPrint = print
+		local oldWarn = warn
+		local oldError = error
+		
+		-- Hook print to suppress when anti-cheat checks
+		print = newcclosure(function(...)
+			if checkcaller() then
+				-- Our script is printing, allow it
+				return oldPrint(...)
+			end
+			-- Suppress anti-cheat's print detection
+		end)
+		
+		-- Hook warn to suppress when anti-cheat checks
+		warn = newcclosure(function(...)
+			if checkcaller() then
+				-- Our script is warning, allow it
+				return oldWarn(...)
+			end
+			-- Suppress anti-cheat's warn detection
+		end)
+		
+		-- Hook error to suppress when anti-cheat checks  
+		error = newcclosure(function(...)
+			if checkcaller() then
+				-- Our script is erroring, allow it
+				return oldError(...)
+			end
+			-- Suppress anti-cheat's error detection
+		end)
+	end)
+	
+	return success
+end
+
 local Library = {
 	ThemeOrder = {"Saturn", "Legacy", "Serika", "Dark", "Rust", "Aqua"},
 	Themes = {
@@ -520,7 +562,8 @@ function Library:create(options)
 		KeySystemKey = "Colin",
 		SupportedGames = {},  -- Empty table = all games allowed. Add PlaceIds to restrict: {123456, 789012}
 		SpoofPing = false,  -- Set to true to randomize ping to avoid alt detection
-		PingRange = {20, 80}  -- Min and max ping values for spoofing
+		PingRange = {20, 80},  -- Min and max ping values for spoofing
+		ProtectOutput = false  -- Set to true to prevent output detection
 	}, options)
 	
 	-- Setup ping spoofing if enabled
@@ -528,6 +571,14 @@ function Library:create(options)
 		local success = setupPingSpoofing(options.PingRange[1], options.PingRange[2])
 		if not success then
 			warn("[Saturn] Ping spoofing failed - executor may not support required functions")
+		end
+	end
+	
+	-- Setup output protection if enabled
+	if options.ProtectOutput then
+		local success = setupOutputProtection()
+		if not success then
+			warn("[Saturn] Output protection failed - executor may not support required functions")
 		end
 	end
 

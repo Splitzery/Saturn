@@ -6,6 +6,7 @@ local gui = Library:create{
     -- SupportedGames = {},  -- Empty = all games allowed. Add PlaceIds to restrict: {123456, 789012}
     SpoofPing = true,  -- Randomize ping to avoid alt detection
     -- PingRange = {20, 80}  -- Optional: customize ping range (default is 20-80ms)
+    ProtectOutput = true  -- Prevent anti-cheat from detecting output/console usage
 }
 
 local tab = gui:tab{
