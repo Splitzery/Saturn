@@ -898,7 +898,8 @@ function Library:create(options)
 		quickAccess = quickAccess,
 		homeButton = homeButton,
 		homePage = homePage,
-		nilFolder = core:object("Folder")
+		nilFolder = core:object("Folder"),
+		keyLocked = true
 	}, Library)
 
 	-- Create Key Tab
@@ -924,7 +925,7 @@ function Library:create(options)
 	-- Add extra top padding to vertically center the key form
 	for _, child in next, keyTab.container.AbsoluteObject:GetChildren() do
 		if child:IsA("UIPadding") then
-			child.PaddingTop = UDim.new(0, 80)
+			child.PaddingTop = UDim.new(0, 50)
 		end
 	end
 
@@ -997,11 +998,14 @@ function Library:create(options)
 		local function submitKey()
 			local enteredKey = keyTextBox.Text
 			if enteredKey == "" then
-				keyStatusLabel.Text = "Please enter a key"
-				wait(2)
-				keyStatusLabel.Text = ""
+				mt:notification({
+					Title = "Key Required",
+					Text = "Please enter a key",
+					Duration = 3
+				})
 			elseif enteredKey == "Colin" then
 				-- Correct key - Close key tab and enable everything
+				mt.keyLocked = false
 				for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
 					if tabButton:IsA("TextButton") then
 						tabButton.Visible = true
@@ -1022,9 +1026,11 @@ function Library:create(options)
 				Library.UrlLabel.Text = Library.Url .. "/home"
 			else
 				-- Incorrect key
-				keyStatusLabel.Text = "Invalid key"
-				wait(2)
-				keyStatusLabel.Text = ""
+				mt:notification({
+					Title = "Invalid Key",
+					Text = "The key you entered is incorrect",
+					Duration = 3
+				})
 			end
 		end
 
@@ -1372,6 +1378,8 @@ function Library:tab(options)
 
 		tabButton.MouseButton1Click:Connect(function()
 			if not tabButton.Active then return end
+			-- Prevent any tab switching if UI is key locked
+			if self.keyLocked then return end
 			for _, tabInfo in next, self.Tabs do
 				local page = tabInfo[1]
 				local button = tabInfo[2]
