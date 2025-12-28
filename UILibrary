@@ -1021,10 +1021,19 @@ function Library:create(options)
 						quickBtn.Visible = true
 					end
 				end
-				-- Switch to home tab and close key tab
+				-- Remove Key tab from Tabs array to prevent it from showing again
+				for i, tabInfo in ipairs(mt.Tabs) do
+					if tabInfo[1] == keyTab.container then
+						table.remove(mt.Tabs, i)
+						break
+					end
+				end
+				-- Switch to home tab and close key tab permanently
 				homePage.Visible = true
 				keyTab.container.Visible = false
+				keyTab.container:Destroy()
 				keyTabButton.Visible = false
+				keyTabButton:Destroy()
 				selectedTab = homeButton
 				homeButton.BackgroundTransparency = 0.15
 				Library.UrlLabel.Text = Library.Url .. "/home"
