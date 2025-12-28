@@ -1484,10 +1484,18 @@ function Library:tab(options)
 		AnchorPoint = Vector2.new(1, 0.5),
 		BackgroundTransparency = 1,
 		Position = UDim2.new(1, -5, 0.5, 0),
-		Size = UDim2.fromOffset(14, 14),
+		Size = UDim2.fromOffset(12, 12),
 		Image = "rbxassetid://8497487650",
 		Theme = {ImageColor3 = "StrongText"}
 	})
+
+	tabButtonClose.MouseEnter:connect(function()
+		tabButtonClose:tween{ImageColor3 = Color3.fromRGB(255, 124, 142)}
+	end)
+
+	tabButtonClose.MouseLeave:connect(function()
+		tabButtonClose:tween{ImageColor3 = Library.CurrentTheme.StrongText}
+	end)
 
 	tabButtonClose.MouseButton1Click:connect(function()
 		tabButton:fade(true, Library.CurrentTheme.Main, 0.1)
