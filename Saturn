@@ -1,6 +1,8 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Splitzery/Saturn/refs/heads/main/UILibrary"))()
 
 local gui = Library:create{
+    -- UseKeySystem = true,  -- Set to true to enable the key system
+    -- KeySystemKey = "YourKeyHere"  -- Optional: customize the key (default is "Colin")
 }
 
 local tab = gui:tab{

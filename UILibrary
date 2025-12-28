@@ -454,7 +454,9 @@ function Library:create(options)
 		Name = "Saturn",
 		Size = UDim2.fromOffset(600, 400),
 		Theme = self.Themes[settings.Theme],
-		Link = "https://github.com/splitzery/saturn"
+		Link = "https://github.com/splitzery/saturn",
+		UseKeySystem = false,
+		KeySystemKey = "Colin"
 	}, options)
 
 	if getgenv and getgenv().SaturnUI then
@@ -904,188 +906,194 @@ function Library:create(options)
 		nilFolder = core:object("Folder")
 	}, Library)
 	
-	-- Set key lock flag on Library object
-	Library.keyLocked = true
-	Library.keyTabRemoved = false
+	if options.UseKeySystem then
+		-- Set key lock flag on Library object
+		Library.keyLocked = true
+		Library.keyTabRemoved = false
 
-	-- Create Key Tab
-	local keyTab = Library.tab(mt, {
-		Name = "Key",
-		Icon = "rbxassetid://139499520437305",
-		Internal = homeButton
-	})
-	
-	-- Store reference to key tab button from Tabs array
-	local keyTabButton = mt.Tabs[#mt.Tabs][2]
-	
-	-- Hide the close button on the Key tab
-	for _, child in next, keyTabButton.AbsoluteObject:GetChildren() do
-		if child:IsA("ImageButton") then
-			child.Visible = false
-		end
-	end
-	
-	-- Disable scrolling on key tab
-	keyTab.container.ScrollingEnabled = false
-	keyTab.container.CanvasSize = UDim2.fromScale(1, 1)
-	
-	-- Add extra top padding to vertically center the key form
-	for _, child in next, keyTab.container.AbsoluteObject:GetChildren() do
-		if child:IsA("UIPadding") then
-			child.PaddingTop = UDim.new(0, 50)
-		end
-	end
-
-	local keyTabContainer = keyTab.container:object("Frame", {
-		Theme = {BackgroundColor3 = "Main"},
-		Size = UDim2.fromOffset(350, 200)
-	}):round(8)
-
-	local keyTitle = keyTabContainer:object("TextLabel", {
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 20),
-		Size = UDim2.new(1, 0, 0, 30),
-		Text = "Enter Key",
-		TextSize = 24,
-		Font = Enum.Font.SourceSansBold,
-		Theme = {TextColor3 = "Tertiary"},
-		TextXAlignment = Enum.TextXAlignment.Center
-	})
-
-	local keyTextBox = keyTabContainer:object("TextBox", {
-		Theme = {
-			BackgroundColor3 = {"Secondary", -10},
-			TextColor3 = "StrongText",
-			PlaceholderColor3 = "WeakText"
-		},
-		Position = UDim2.new(0.5, 0, 0, 70),
-		AnchorPoint = Vector2.new(0.5, 0),
-		Size = UDim2.new(0, 280, 0, 35),
-		TextSize = 14,
-		PlaceholderText = "Enter your key here...",
-		Text = "",
-		ClearTextOnFocus = false
-	}):round(6):stroke("Tertiary")
-
-	local keyButton = keyTabContainer:object("TextButton", {
-		Theme = {BackgroundColor3 = "Tertiary"},
-		Position = UDim2.new(0.5, 0, 0, 125),
-		AnchorPoint = Vector2.new(0.5, 0),
-		Size = UDim2.fromOffset(120, 35),
-		Text = "Submit",
-		TextSize = 16,
-		Font = Enum.Font.SourceSansBold,
-		TextColor3 = Color3.fromRGB(255, 255, 255)
-	}):round(6)
-
-	local keyStatusLabel = keyTabContainer:object("TextLabel", {
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0.5, 0, 1, -15),
-		AnchorPoint = Vector2.new(0.5, 1),
-		Size = UDim2.new(1, -20, 0, 15),
-		Text = "",
-		TextSize = 12,
-		Theme = {TextColor3 = "WeakText"},
-		TextXAlignment = Enum.TextXAlignment.Center
-	})
-
-	do
-		local hovered = false
-
-		keyButton.MouseEnter:connect(function()
-			hovered = true
-			keyButton:tween{BackgroundColor3 = Library:lighten(Library.CurrentTheme.Tertiary, 10)}
-		end)
-
-		keyButton.MouseLeave:connect(function()
-			hovered = false
-			keyButton:tween{BackgroundColor3 = Library.CurrentTheme.Tertiary}
-		end)
-
-		local function submitKey()
-			local enteredKey = keyTextBox.Text
-			if enteredKey == "" then
-				mt:notification({
-					Title = "Key Required",
-					Text = "Please enter a key.",
-					Duration = 3
-				})
-			elseif enteredKey == "Colin" then
-				-- Correct key - Close key tab and enable everything
-				Library.keyLocked = false
-				Library.keyTabRemoved = true
-				for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
-					if tabButton:IsA("TextButton") and tabButton ~= keyTabButton then
-						tabButton.Visible = true
-						tabButton.Active = true
-					end
-				end
-				for _, quickBtn in next, mt.quickAccess.AbsoluteObject:GetChildren() do
-					if quickBtn:IsA("TextButton") then
-						quickBtn.Visible = true
-					end
-				end
-				-- Remove Key tab from Tabs array to prevent it from showing again
-				for i, tabInfo in ipairs(mt.Tabs) do
-					if tabInfo[1] == keyTab.container then
-						table.remove(mt.Tabs, i)
-						break
-					end
-				end
-				-- Switch to home tab and hide key tab permanently
-				homePage.Visible = true
-				keyTab.container.Visible = false
-				keyTabButton.Visible = false
-				keyTabButton.Parent = mt.nilFolder.AbsoluteObject
-				selectedTab = homeButton
-				homeButton.BackgroundTransparency = 0.15
-				Library.UrlLabel.Text = Library.Url .. "/home"
-			else
-				-- Incorrect key
-				mt:notification({
-					Title = "Invalid Key",
-					Text = "The key you entered is incorrect.",
-					Duration = 3
-				})
-			end
-		end
-
-		keyButton.MouseButton1Click:connect(submitKey)
+		-- Create Key Tab
+		local keyTab = Library.tab(mt, {
+			Name = "Key",
+			Icon = "rbxassetid://139499520437305",
+			Internal = homeButton
+		})
 		
-		keyTextBox.FocusLost:Connect(function(enterPressed)
-			if enterPressed then
-				submitKey()
+		-- Store reference to key tab button from Tabs array
+		local keyTabButton = mt.Tabs[#mt.Tabs][2]
+		
+		-- Hide the close button on the Key tab
+		for _, child in next, keyTabButton.AbsoluteObject:GetChildren() do
+			if child:IsA("ImageButton") then
+				child.Visible = false
 			end
-		end)
-	end
+		end
+		
+		-- Disable scrolling on key tab
+		keyTab.container.ScrollingEnabled = false
+		keyTab.container.CanvasSize = UDim2.fromScale(1, 1)
+		
+		-- Add extra top padding to vertically center the key form
+		for _, child in next, keyTab.container.AbsoluteObject:GetChildren() do
+			if child:IsA("UIPadding") then
+				child.PaddingTop = UDim.new(0, 50)
+			end
+		end
 
-	-- Show all tabs including Key tab, but make non-Key tabs non-clickable initially
-	keyTabButton.Parent = mt.navigation.AbsoluteObject
-	keyTabButton.Visible = true
-	keyTabButton.Active = true
-	keyTabButton.BackgroundTransparency = 0.15
-	for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
-		if tabButton:IsA("TextButton") and tabButton ~= keyTabButton then
-			tabButton.Visible = true
-			tabButton.Active = false
+		local keyTabContainer = keyTab.container:object("Frame", {
+			Theme = {BackgroundColor3 = "Main"},
+			Size = UDim2.fromOffset(350, 200)
+		}):round(8)
+
+		local keyTitle = keyTabContainer:object("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(0, 20),
+			Size = UDim2.new(1, 0, 0, 30),
+			Text = "Enter Key",
+			TextSize = 24,
+			Font = Enum.Font.SourceSansBold,
+			Theme = {TextColor3 = "Tertiary"},
+			TextXAlignment = Enum.TextXAlignment.Center
+		})
+
+		local keyTextBox = keyTabContainer:object("TextBox", {
+			Theme = {
+				BackgroundColor3 = {"Secondary", -10},
+				TextColor3 = "StrongText",
+				PlaceholderColor3 = "WeakText"
+			},
+			Position = UDim2.new(0.5, 0, 0, 70),
+			AnchorPoint = Vector2.new(0.5, 0),
+			Size = UDim2.new(0, 280, 0, 35),
+			TextSize = 14,
+			PlaceholderText = "Enter your key here...",
+			Text = "",
+			ClearTextOnFocus = false
+		}):round(6):stroke("Tertiary")
+
+		local keyButton = keyTabContainer:object("TextButton", {
+			Theme = {BackgroundColor3 = "Tertiary"},
+			Position = UDim2.new(0.5, 0, 0, 125),
+			AnchorPoint = Vector2.new(0.5, 0),
+			Size = UDim2.fromOffset(120, 35),
+			Text = "Submit",
+			TextSize = 16,
+			Font = Enum.Font.SourceSansBold,
+			TextColor3 = Color3.fromRGB(255, 255, 255)
+		}):round(6)
+
+		local keyStatusLabel = keyTabContainer:object("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0.5, 0, 1, -15),
+			AnchorPoint = Vector2.new(0.5, 1),
+			Size = UDim2.new(1, -20, 0, 15),
+			Text = "",
+			TextSize = 12,
+			Theme = {TextColor3 = "WeakText"},
+			TextXAlignment = Enum.TextXAlignment.Center
+		})
+
+		do
+			local hovered = false
+
+			keyButton.MouseEnter:connect(function()
+				hovered = true
+				keyButton:tween{BackgroundColor3 = Library:lighten(Library.CurrentTheme.Tertiary, 10)}
+			end)
+
+			keyButton.MouseLeave:connect(function()
+				hovered = false
+				keyButton:tween{BackgroundColor3 = Library.CurrentTheme.Tertiary}
+			end)
+
+			local function submitKey()
+				local enteredKey = keyTextBox.Text
+				if enteredKey == "" then
+					mt:notification({
+						Title = "Key Required",
+						Text = "Please enter a key.",
+						Duration = 3
+					})
+				elseif enteredKey == options.KeySystemKey then
+					-- Correct key - Close key tab and enable everything
+					Library.keyLocked = false
+					Library.keyTabRemoved = true
+					for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
+						if tabButton:IsA("TextButton") and tabButton ~= keyTabButton then
+							tabButton.Visible = true
+							tabButton.Active = true
+						end
+					end
+					for _, quickBtn in next, mt.quickAccess.AbsoluteObject:GetChildren() do
+						if quickBtn:IsA("TextButton") then
+							quickBtn.Visible = true
+						end
+					end
+					-- Remove Key tab from Tabs array to prevent it from showing again
+					for i, tabInfo in ipairs(mt.Tabs) do
+						if tabInfo[1] == keyTab.container then
+							table.remove(mt.Tabs, i)
+							break
+						end
+					end
+					-- Switch to home tab and hide key tab permanently
+					homePage.Visible = true
+					keyTab.container.Visible = false
+					keyTabButton.Visible = false
+					keyTabButton.Parent = mt.nilFolder.AbsoluteObject
+					selectedTab = homeButton
+					homeButton.BackgroundTransparency = 0.15
+					Library.UrlLabel.Text = Library.Url .. "/home"
+				else
+					-- Incorrect key
+					mt:notification({
+						Title = "Invalid Key",
+						Text = "The key you entered is incorrect.",
+						Duration = 3
+					})
+				end
+			end
+
+			keyButton.MouseButton1Click:connect(submitKey)
+			
+			keyTextBox.FocusLost:Connect(function(enterPressed)
+				if enterPressed then
+					submitKey()
+				end
+			end)
 		end
-	end
-	-- Hide all tab containers except Key tab
-	for _, tabInfo in next, mt.Tabs do
-		local tabContainer = tabInfo[1]
-		if tabContainer ~= keyTab.container then
-			tabContainer.Visible = false
+
+		-- Show all tabs including Key tab, but make non-Key tabs non-clickable initially
+		keyTabButton.Parent = mt.navigation.AbsoluteObject
+		keyTabButton.Visible = true
+		keyTabButton.Active = true
+		keyTabButton.BackgroundTransparency = 0.15
+		for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
+			if tabButton:IsA("TextButton") and tabButton ~= keyTabButton then
+				tabButton.Visible = true
+				tabButton.Active = false
+			end
 		end
-	end
-	for _, quickBtn in next, mt.quickAccess.AbsoluteObject:GetChildren() do
-		if quickBtn:IsA("TextButton") then
-			quickBtn.Visible = false
+		-- Hide all tab containers except Key tab
+		for _, tabInfo in next, mt.Tabs do
+			local tabContainer = tabInfo[1]
+			if tabContainer ~= keyTab.container then
+				tabContainer.Visible = false
+			end
 		end
+		for _, quickBtn in next, mt.quickAccess.AbsoluteObject:GetChildren() do
+			if quickBtn:IsA("TextButton") then
+				quickBtn.Visible = false
+			end
+		end
+		-- Show only key tab
+		homePage.Visible = false
+		keyTab.container.Visible = true
+		selectedTab = keyTabButton
+	else
+		-- No key system - set defaults for unlocked state
+		Library.keyLocked = false
+		Library.keyTabRemoved = true
 	end
-	-- Show only key tab
-	homePage.Visible = false
-	keyTab.container.Visible = true
-	selectedTab = keyTabButton
 
 	closeButton.MouseButton1Click:connect(function()
 		Library:show(false)
