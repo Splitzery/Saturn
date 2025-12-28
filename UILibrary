@@ -906,6 +906,9 @@ function Library:create(options)
 		Name = "Key",
 		Internal = homeButton
 	})
+	
+	-- Store reference to key tab button from Tabs array
+	local keyTabButton = mt.Tabs[#mt.Tabs][2]
 
 	local keyTabContainer = keyTab.container:object("Frame", {
 		Theme = {BackgroundColor3 = "Main"},
@@ -1017,7 +1020,7 @@ function Library:create(options)
 
 	-- Hide all other tabs and quick access buttons initially
 	for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
-		if tabButton:IsA("TextButton") and tabButton ~= keyTab.tabButton then
+		if tabButton:IsA("TextButton") and tabButton ~= keyTabButton then
 			tabButton.Visible = false
 		end
 	end
@@ -1028,8 +1031,8 @@ function Library:create(options)
 	end
 	-- Show only key tab
 	homePage.Visible = false
-	keyTab.tab.Visible = true
-	selectedTab = keyTab.tabButton
+	keyTab.container.Visible = true
+	selectedTab = keyTabButton
 
 	closeButton.MouseButton1Click:connect(function()
 		Library:show(false)
