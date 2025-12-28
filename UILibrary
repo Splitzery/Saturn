@@ -910,6 +910,7 @@ function Library:create(options)
 	-- Create Key Tab
 	local keyTab = Library.tab(mt, {
 		Name = "Key",
+		Icon = "rbxassetid://114717743511744",
 		Internal = homeButton
 	})
 	
