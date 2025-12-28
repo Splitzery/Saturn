@@ -3,6 +3,7 @@ local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Split
 local gui = Library:create{
     -- UseKeySystem = true,  -- Set to true to enable the key system
     -- KeySystemKey = "YourKeyHere"  -- Optional: customize the key (default is "Colin")
+    -- SupportedGames = {},  -- Empty = all games allowed. Add PlaceIds to restrict: {123456, 789012}
 }
 
 local tab = gui:tab{

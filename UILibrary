@@ -6,6 +6,25 @@ local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local HTTPService = game:GetService("HttpService")
 
+-- Safe parent getter to avoid detection
+local function getSafeParent()
+	if RunService:IsStudio() then
+		return LocalPlayer.PlayerGui
+	end
+	
+	-- Try executor-specific hidden GUI functions (undetectable)
+	if gethui then
+		return gethui()
+	elseif get_hidden_gui then
+		return get_hidden_gui()
+	end
+	
+	-- Use cloneref to avoid direct CoreGui detection
+	local cloneref = cloneref or function(obj) return obj end
+	local CoreGui = cloneref(game:GetService("CoreGui"))
+	return CoreGui
+end
+
 local Library = {
 	ThemeOrder = {"Saturn", "Legacy", "Serika", "Dark", "Rust", "Aqua"},
 	Themes = {
@@ -456,8 +475,52 @@ function Library:create(options)
 		Theme = self.Themes[settings.Theme],
 		Link = "https://github.com/splitzery/saturn",
 		UseKeySystem = false,
-		KeySystemKey = "Colin"
+		KeySystemKey = "Colin",
+		SupportedGames = {}  -- Empty table = all games allowed. Add PlaceIds to restrict: {123456, 789012}
 	}, options)
+
+	-- Check if current game is supported
+	if #options.SupportedGames > 0 then
+		local currentPlaceId = game.PlaceId
+		local isSupported = false
+		
+		for _, placeId in ipairs(options.SupportedGames) do
+			if placeId == currentPlaceId then
+				isSupported = true
+				break
+			end
+		end
+		
+		if not isSupported then
+			-- Game not supported - show notification and return empty table
+			local tempGui = self:object("ScreenGui", {
+				Parent = getSafeParent(),
+				ZIndexBehavior = Enum.ZIndexBehavior.Global
+			})
+			
+			local notificationHolder = tempGui:object("Frame", {
+				AnchorPoint = Vector2.new(1, 1),
+				BackgroundTransparency = 1,
+				Position = UDim2.new(1, -30,1, -30),
+				Size = UDim2.new(0, 300, 1, -60)
+			})
+			
+			local tempMt = setmetatable({
+				notifs = notificationHolder
+			}, Library)
+			
+			tempMt:notification({
+				Title = "Game Not Supported",
+				Text = "This game (PlaceId: " .. currentPlaceId .. ") is not supported by " .. options.Name .. ".",
+				Duration = 5
+			})
+			
+			-- Return empty metatable so script doesn't error
+			return setmetatable({}, {
+				__index = function() return function() end end
+			})
+		end
+	end
 
 	if getgenv and getgenv().SaturnUI then
 		getgenv():SaturnUI()
@@ -477,7 +540,7 @@ function Library:create(options)
 	self.CurrentTheme = options.Theme
 
 	local gui = self:object("ScreenGui", {
-		Parent = (RunService:IsStudio() and LocalPlayer.PlayerGui) or game:GetService("CoreGui"),
+		Parent = getSafeParent(),
 		ZIndexBehavior = Enum.ZIndexBehavior.Global
 	})
 
