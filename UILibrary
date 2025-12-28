@@ -707,15 +707,21 @@ function Library:create(options)
 		Image = "rbxassetid://114141740157700"
 	})
 
-	-- Rainbow animation for Saturn logo
+	-- Rainbow animation for Saturn logo and all tab icons
+	Library.rainbowHue = 0
+	table.insert(mt.rainbowIcons, homeButtonIcon)
 	task.spawn(function()
-		local hue = 0
 		while homeButtonIcon.AbsoluteObject do
-			hue = (hue + 0.005) % 1
-			homeButtonIcon:tween({
-				ImageColor3 = Color3.fromHSV(hue, 1, 1),
-				Length = 0.1
-			})
+			Library.rainbowHue = (Library.rainbowHue + 0.005) % 1
+			local color = Color3.fromHSV(Library.rainbowHue, 1, 1)
+			for _, icon in ipairs(mt.rainbowIcons) do
+				if icon and icon.AbsoluteObject then
+					icon:tween({
+						ImageColor3 = color,
+						Length = 0.1
+					})
+				end
+			end
 			wait(0.1)
 		end
 	end)
@@ -898,6 +904,7 @@ function Library:create(options)
 		Theme = options.Theme,
 		Tabs = tabs,
 		quickAccess = quickAccess,
+		rainbowIcons = {}
 		homeButton = homeButton,
 		homePage = homePage,
 		nilFolder = core:object("Folder")
@@ -1467,8 +1474,11 @@ function Library:tab(options)
 		Position = UDim2.new(0, 5, 0.5, 0),
 		Size = UDim2.new(0, 15, 0, 15),
 		Image = options.Icon,
-		Theme = {ImageColor3 = "StrongText"}
+		ImageColor3 = Color3.fromHSV(Library.rainbowHue or 0, 1, 1)
 	})
+	
+	-- Add tab icon to rainbow animation
+	table.insert(self.rainbowIcons or {}, tabButtonIcon)
 
 	local tabButtonClose = tabButton:object("ImageButton", {
 		AnchorPoint = Vector2.new(1, 0.5),
