@@ -886,22 +886,34 @@ function Library:create(options)
 		PaddingTop = UDim.new(0, 5)
 	})
 
-	-- Key Entry Screen
-	local keyScreen = content:object("Frame", {
-		Theme = {BackgroundColor3 = "Secondary"},
-		Size = UDim2.fromScale(1, 1),
-		BackgroundTransparency = 0.8,
-		ZIndex = 100
+
+	local mt = setmetatable({
+		core = core,
+		notifs = notificationHolder,
+		statusText = status,
+		container = content,
+		navigation = tabButtons,
+		Theme = options.Theme,
+		Tabs = tabs,
+		quickAccess = quickAccess,
+		homeButton = homeButton,
+		homePage = homePage,
+		nilFolder = core:object("Folder")
+	}, Library)
+
+	-- Create Key Tab
+	local keyTab = Library.tab(mt, {
+		Name = "Key",
+		Internal = homeButton
 	})
 
-	local keyContainer = keyScreen:object("Frame", {
+	local keyTabContainer = keyTab.container:object("Frame", {
 		Theme = {BackgroundColor3 = "Main"},
 		Centered = true,
-		Size = UDim2.fromOffset(350, 200),
-		ZIndex = 101
+		Size = UDim2.fromOffset(350, 200)
 	}):round(8)
 
-	local keyTitle = keyContainer:object("TextLabel", {
+	local keyTitle = keyTabContainer:object("TextLabel", {
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(0, 20),
 		Size = UDim2.new(1, 0, 0, 30),
@@ -909,11 +921,10 @@ function Library:create(options)
 		TextSize = 24,
 		Font = Enum.Font.SourceSansBold,
 		Theme = {TextColor3 = "Tertiary"},
-		TextXAlignment = Enum.TextXAlignment.Center,
-		ZIndex = 102
+		TextXAlignment = Enum.TextXAlignment.Center
 	})
 
-	local keyTextBox = keyContainer:object("TextBox", {
+	local keyTextBox = keyTabContainer:object("TextBox", {
 		Theme = {
 			BackgroundColor3 = {"Secondary", -10},
 			TextColor3 = "StrongText",
@@ -925,11 +936,10 @@ function Library:create(options)
 		TextSize = 14,
 		PlaceholderText = "Enter your key here...",
 		Text = "",
-		ClearTextOnFocus = false,
-		ZIndex = 102
+		ClearTextOnFocus = false
 	}):round(6):stroke("Tertiary")
 
-	local keyButton = keyContainer:object("TextButton", {
+	local keyButton = keyTabContainer:object("TextButton", {
 		Theme = {BackgroundColor3 = "Tertiary"},
 		Position = UDim2.new(0.5, 0, 0, 125),
 		AnchorPoint = Vector2.new(0.5, 0),
@@ -937,11 +947,10 @@ function Library:create(options)
 		Text = "Submit",
 		TextSize = 16,
 		Font = Enum.Font.SourceSansBold,
-		TextColor3 = Color3.fromRGB(255, 255, 255),
-		ZIndex = 102
+		TextColor3 = Color3.fromRGB(255, 255, 255)
 	}):round(6)
 
-	local keyStatusLabel = keyContainer:object("TextLabel", {
+	local keyStatusLabel = keyTabContainer:object("TextLabel", {
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0.5, 0, 1, -15),
 		AnchorPoint = Vector2.new(0.5, 1),
@@ -949,8 +958,7 @@ function Library:create(options)
 		Text = "",
 		TextSize = 12,
 		Theme = {TextColor3 = "WeakText"},
-		TextXAlignment = Enum.TextXAlignment.Center,
-		ZIndex = 102
+		TextXAlignment = Enum.TextXAlignment.Center
 	})
 
 	do
@@ -973,15 +981,23 @@ function Library:create(options)
 				wait(2)
 				keyStatusLabel.Text = ""
 			elseif enteredKey == "Colin" then
-				-- Correct key - Hide key screen and show main content
-				keyScreen:tween({BackgroundTransparency = 1, Length = 0.3})
-				keyContainer:tween({BackgroundTransparency = 1, Length = 0.3}, function()
-					keyScreen.Visible = false
-				end)
-				keyTitle:tween({TextTransparency = 1, Length = 0.3})
-				keyTextBox:tween({BackgroundTransparency = 1, TextTransparency = 1, Length = 0.3})
-				keyButton:tween({BackgroundTransparency = 1, TextTransparency = 1, Length = 0.3})
-				keyStatusLabel:tween({TextTransparency = 1, Length = 0.3})
+				-- Correct key - Close key tab and enable everything
+				for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
+					if tabButton:IsA("TextButton") then
+						tabButton.Visible = true
+					end
+				end
+				for _, quickBtn in next, mt.quickAccess.AbsoluteObject:GetChildren() do
+					if quickBtn:IsA("TextButton") then
+						quickBtn.Visible = true
+					end
+				end
+				-- Switch to home tab
+				homePage.Visible = true
+				keyTab.tab.Visible = false
+				selectedTab = homeButton
+				homeButton.BackgroundTransparency = 0.15
+				Library.UrlLabel.Text = Library.Url .. "/home"
 			else
 				-- Incorrect key
 				keyStatusLabel.Text = "Invalid key"
@@ -999,20 +1015,21 @@ function Library:create(options)
 		end)
 	end
 
-	local mt = setmetatable({
-		core = core,
-		notifs = notificationHolder,
-		statusText = status,
-		container = content,
-		navigation = tabButtons,
-		Theme = options.Theme,
-		Tabs = tabs,
-		quickAccess = quickAccess,
-		homeButton = homeButton,
-		homePage = homePage,
-		nilFolder = core:object("Folder"),
-		keyScreen = keyScreen
-	}, Library)
+	-- Hide all other tabs and quick access buttons initially
+	for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
+		if tabButton:IsA("TextButton") and tabButton ~= keyTab.tabButton then
+			tabButton.Visible = false
+		end
+	end
+	for _, quickBtn in next, mt.quickAccess.AbsoluteObject:GetChildren() do
+		if quickBtn:IsA("TextButton") then
+			quickBtn.Visible = false
+		end
+	end
+	-- Show only key tab
+	homePage.Visible = false
+	keyTab.tab.Visible = true
+	selectedTab = keyTab.tabButton
 
 	closeButton.MouseButton1Click:connect(function()
 		Library:show(false)
