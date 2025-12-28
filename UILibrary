@@ -1047,6 +1047,14 @@ function Library:notification(options)
 		ImageTransparency = 1
 	})
 
+	exit.MouseEnter:connect(function()
+		exit:tween{ImageColor3 = Color3.fromRGB(255, 124, 142)}
+	end)
+
+	exit.MouseLeave:connect(function()
+		exit:tween{ImageColor3 = Color3.fromRGB(255, 255, 255)}
+	end)
+
 	exit.MouseButton1Click:Connect(function()
 		fadeOut()
 	end)
