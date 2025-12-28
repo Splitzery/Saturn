@@ -759,6 +759,8 @@ function Library:create(options)
 		end)
 
 		homeButton.MouseButton1Click:Connect(function()
+			-- Prevent switching to home if UI is key locked
+			if Library.keyLocked then return end
 			for _, tabInfo in next, tabs do
 				local page = tabInfo[1]
 				local button = tabInfo[2]
