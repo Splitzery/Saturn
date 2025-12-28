@@ -904,7 +904,7 @@ function Library:create(options)
 		Theme = options.Theme,
 		Tabs = tabs,
 		quickAccess = quickAccess,
-		rainbowIcons = {}
+		rainbowIcons = {},
 		homeButton = homeButton,
 		homePage = homePage,
 		nilFolder = core:object("Folder")
