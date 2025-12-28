@@ -886,6 +886,112 @@ function Library:create(options)
 		PaddingTop = UDim.new(0, 5)
 	})
 
+	-- Key Entry Screen
+	local keyScreen = content:object("Frame", {
+		Theme = {BackgroundColor3 = "Secondary"},
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 10
+	})
+
+	local keyContainer = keyScreen:object("Frame", {
+		Theme = {BackgroundColor3 = "Main"},
+		Centered = true,
+		Size = UDim2.fromOffset(350, 200)
+	}):round(8)
+
+	local keyTitle = keyContainer:object("TextLabel", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(0, 20),
+		Size = UDim2.new(1, 0, 0, 30),
+		Text = "Enter Key",
+		TextSize = 24,
+		Font = Enum.Font.SourceSansBold,
+		Theme = {TextColor3 = "Tertiary"},
+		TextXAlignment = Enum.TextXAlignment.Center
+	})
+
+	local keyTextBox = keyContainer:object("TextBox", {
+		Theme = {
+			BackgroundColor3 = {"Secondary", -10},
+			TextColor3 = "StrongText"
+		},
+		Position = UDim2.new(0.5, 0, 0, 70),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Size = UDim2.new(0, 280, 0, 35),
+		TextSize = 14,
+		PlaceholderText = "Enter your key here...",
+		Theme = {PlaceholderColor3 = "WeakText"},
+		Text = "",
+		ClearTextOnFocus = false
+	}):round(6):stroke("Tertiary")
+
+	local keyButton = keyContainer:object("TextButton", {
+		Theme = {BackgroundColor3 = "Tertiary"},
+		Position = UDim2.new(0.5, 0, 0, 125),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Size = UDim2.fromOffset(120, 35),
+		Text = "Submit",
+		TextSize = 16,
+		Font = Enum.Font.SourceSansBold,
+		TextColor3 = Color3.fromRGB(255, 255, 255)
+	}):round(6)
+
+	local keyStatusLabel = keyContainer:object("TextLabel", {
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0.5, 0, 1, -15),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Size = UDim2.new(1, -20, 0, 15),
+		Text = "",
+		TextSize = 12,
+		Theme = {TextColor3 = "WeakText"},
+		TextXAlignment = Enum.TextXAlignment.Center
+	})
+
+	do
+		local hovered = false
+
+		keyButton.MouseEnter:connect(function()
+			hovered = true
+			keyButton:tween{BackgroundColor3 = Library:lighten(Library.CurrentTheme.Tertiary, 10)}
+		end)
+
+		keyButton.MouseLeave:connect(function()
+			hovered = false
+			keyButton:tween{BackgroundColor3 = Library.CurrentTheme.Tertiary}
+		end)
+
+		local function submitKey()
+			local enteredKey = keyTextBox.Text
+			if enteredKey == "" then
+				keyStatusLabel.Text = "Please enter a key"
+				wait(2)
+				keyStatusLabel.Text = ""
+			elseif enteredKey == "Colin" then
+				-- Correct key - Hide key screen and show main content
+				keyScreen:tween({BackgroundTransparency = 1, Length = 0.3})
+				keyContainer:tween({BackgroundTransparency = 1, Length = 0.3}, function()
+					keyScreen.Visible = false
+				end)
+				keyTitle:tween({TextTransparency = 1, Length = 0.3})
+				keyTextBox:tween({BackgroundTransparency = 1, TextTransparency = 1, Length = 0.3})
+				keyButton:tween({BackgroundTransparency = 1, TextTransparency = 1, Length = 0.3})
+				keyStatusLabel:tween({TextTransparency = 1, Length = 0.3})
+			else
+				-- Incorrect key
+				keyStatusLabel.Text = "Invalid key"
+				wait(2)
+				keyStatusLabel.Text = ""
+			end
+		end
+
+		keyButton.MouseButton1Click:connect(submitKey)
+		
+		keyTextBox.FocusLost:Connect(function(enterPressed)
+			if enterPressed then
+				submitKey()
+			end
+		end)
+	end
 
 	local mt = setmetatable({
 		core = core,
@@ -899,6 +1005,7 @@ function Library:create(options)
 		homeButton = homeButton,
 		homePage = homePage,
 		nilFolder = core:object("Folder"),
+		keyScreen = keyScreen
 	}, Library)
 
 	closeButton.MouseButton1Click:connect(function()
