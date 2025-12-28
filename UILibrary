@@ -28,85 +28,132 @@ end
 -- Ping spoofing to avoid alt detection
 local spoofedPing = math.random(20, 80)
 local function setupPingSpoofing(minPing, maxPing)
-	if not getrawmetatable or not setreadonly or not newcclosure or not checkcaller then
-		return false
+	-- Try primary method with metamethod hooks
+	local primarySuccess = false
+	
+	if getrawmetatable and setreadonly and newcclosure and checkcaller then
+		primarySuccess = pcall(function()
+			local mt = getrawmetatable(game)
+			local oldIndex = mt.__index
+			
+			setreadonly(mt, false)
+			
+			-- Hook __index to spoof ping readings
+			mt.__index = newcclosure(function(t, k)
+				if not checkcaller() then
+					-- Anti-cheat is reading, return spoofed ping
+					if typeof(t) == "Instance" and k == "Value" then
+						local name = tostring(t)
+						if name:find("Ping") or name:find("ping") then
+							return spoofedPing
+						end
+					end
+				end
+				return oldIndex(t, k)
+			end)
+			
+			setreadonly(mt, true)
+		end)
 	end
 	
-	local success = pcall(function()
-		local mt = getrawmetatable(game)
-		local oldNamecall = mt.__namecall
-		local oldIndex = mt.__index
-		
-		setreadonly(mt, false)
-		
-		-- Hook __index to spoof ping readings
-		mt.__index = newcclosure(function(t, k)
-			if not checkcaller() then
-				-- Anti-cheat is reading, return spoofed ping
+	-- Fallback method: Try hookmetamethod
+	if not primarySuccess and hookmetamethod then
+		primarySuccess = pcall(function()
+			hookmetamethod(game, "__index", function(t, k)
 				if typeof(t) == "Instance" and k == "Value" then
 					local name = tostring(t)
 					if name:find("Ping") or name:find("ping") then
 						return spoofedPing
 					end
 				end
-			end
-			return oldIndex(t, k)
+				return hookmetamethod(game, "__index")(t, k)
+			end)
 		end)
-		
-		setreadonly(mt, true)
-		
-		-- Randomize ping periodically (every 5-15 seconds)
+	end
+	
+	-- If any method succeeded, start the randomizer
+	if primarySuccess then
 		task.spawn(function()
 			while true do
 				wait(math.random(5, 15))
 				spoofedPing = math.random(minPing, maxPing)
 			end
 		end)
-	end)
+	end
 	
-	return success
+	return primarySuccess
 end
 
 -- Output detection bypass
 local function setupOutputProtection()
-	if not hookfunction or not newcclosure or not checkcaller then
-		return false
+	-- Try primary method with hookfunction
+	local primarySuccess = false
+	
+	if hookfunction and newcclosure and checkcaller then
+		primarySuccess = pcall(function()
+			local oldPrint = print
+			local oldWarn = warn
+			local oldError = error
+			
+			-- Hook print to suppress when anti-cheat checks
+			print = newcclosure(function(...)
+				if checkcaller() then
+					return oldPrint(...)
+				end
+			end)
+			
+			warn = newcclosure(function(...)
+				if checkcaller() then
+					return oldWarn(...)
+				end
+			end)
+			
+			error = newcclosure(function(...)
+				if checkcaller() then
+					return oldError(...)
+				end
+			end)
+		end)
 	end
 	
-	local success = pcall(function()
-		local oldPrint = print
-		local oldWarn = warn
-		local oldError = error
-		
-		-- Hook print to suppress when anti-cheat checks
-		print = newcclosure(function(...)
-			if checkcaller() then
-				-- Our script is printing, allow it
+	-- Fallback method: Try replaceclosure
+	if not primarySuccess and replaceclosure then
+		primarySuccess = pcall(function()
+			local oldPrint = print
+			local oldWarn = warn
+			local oldError = error
+			
+			replaceclosure(print, function(...)
+				return oldPrint(...)
+			end)
+			
+			replaceclosure(warn, function(...)
+				return oldWarn(...)
+			end)
+			
+			replaceclosure(error, function(...)
+				return oldError(...)
+			end)
+		end)
+	end
+	
+	-- Second fallback: Basic redefinition (least effective)
+	if not primarySuccess then
+		primarySuccess = pcall(function()
+			local oldPrint = print
+			local oldWarn = warn
+			
+			_G.print = function(...)
 				return oldPrint(...)
 			end
-			-- Suppress anti-cheat's print detection
-		end)
-		
-		-- Hook warn to suppress when anti-cheat checks
-		warn = newcclosure(function(...)
-			if checkcaller() then
-				-- Our script is warning, allow it
+			
+			_G.warn = function(...)
 				return oldWarn(...)
 			end
-			-- Suppress anti-cheat's warn detection
 		end)
-		
-		-- Hook error to suppress when anti-cheat checks  
-		error = newcclosure(function(...)
-			if checkcaller() then
-				-- Our script is erroring, allow it
-				return oldError(...)
-			end
-			-- Suppress anti-cheat's error detection
-		end)
-	end)
+	end
 	
-	return success
+	return primarySuccess
 end
 
 local Library = {
