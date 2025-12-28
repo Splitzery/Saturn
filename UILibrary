@@ -1041,6 +1041,13 @@ function Library:create(options)
 			tabButton.Active = false
 		end
 	end
+	-- Hide all tab containers except Key tab
+	for _, tabInfo in next, mt.Tabs do
+		local tabContainer = tabInfo[1]
+		if tabContainer ~= keyTab.container then
+			tabContainer.Visible = false
+		end
+	end
 	for _, quickBtn in next, mt.quickAccess.AbsoluteObject:GetChildren() do
 		if quickBtn:IsA("TextButton") then
 			quickBtn.Visible = false
@@ -1331,16 +1338,19 @@ function Library:tab(options)
 		local hovered = false
 
 		tabButton.MouseEnter:connect(function()
+			if not tabButton.Active then return end
 			hovered = true
 			tabButton:tween{BackgroundTransparency = ((selectedTab == tabButton) and 0.15) or 0.3}
 		end)
 
 		tabButton.MouseLeave:connect(function()
+			if not tabButton.Active then return end
 			hovered = false
 			tabButton:tween{BackgroundTransparency = ((selectedTab == tabButton) and 0.15) or 1}
 		end)
 
 		tabButton.MouseButton1Down:connect(function()
+			if not tabButton.Active then return end
 			down = true
 			tabButton:tween{BackgroundTransparency = 0}
 		end)
