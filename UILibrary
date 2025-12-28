@@ -913,14 +913,14 @@ function Library:create(options)
 	local keyTextBox = keyContainer:object("TextBox", {
 		Theme = {
 			BackgroundColor3 = {"Secondary", -10},
-			TextColor3 = "StrongText"
+			TextColor3 = "StrongText",
+			PlaceholderColor3 = "WeakText"
 		},
 		Position = UDim2.new(0.5, 0, 0, 70),
 		AnchorPoint = Vector2.new(0.5, 0),
 		Size = UDim2.new(0, 280, 0, 35),
 		TextSize = 14,
 		PlaceholderText = "Enter your key here...",
-		Theme = {PlaceholderColor3 = "WeakText"},
 		Text = "",
 		ClearTextOnFocus = false
 	}):round(6):stroke("Tertiary")
