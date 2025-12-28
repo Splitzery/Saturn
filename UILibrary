@@ -1354,6 +1354,7 @@ function Library:tab(options)
 		end)
 
 		tabButton.MouseButton1Click:Connect(function()
+			if not tabButton.Active then return end
 			for _, tabInfo in next, self.Tabs do
 				local page = tabInfo[1]
 				local button = tabInfo[2]
@@ -1375,6 +1376,7 @@ function Library:tab(options)
 		end)
 
 		quickAccessButton.MouseButton1Click:connect(function()
+			if not tabButton.Active then return end
 			if not tabButton.Visible then
 				tabButton.Parent = self.navigation.AbsoluteObject
 				tabButton.Size = UDim2.new(0, 50, tabButton.Size.Y.Scale, tabButton.Size.Y.Offset)
