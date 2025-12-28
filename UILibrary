@@ -420,21 +420,34 @@ end
 function Library:create(options)
 
 	local settings = {
-		Theme = "Saturn"
+		Theme = "Saturn",
+		ToggleKey = "Delete",
+		LockDragging = true,
+		DragSpeed = 14
 	}
 
 	if readfile and writefile and isfile then
 		if not isfile("SaturnSettings.json") then
 			writefile("SaturnSettings.json", HTTPService:JSONEncode(settings))
 		else
-			settings = HTTPService:JSONDecode(readfile("SaturnSettings.json"))
+			local success, loadedSettings = pcall(function()
+				return HTTPService:JSONDecode(readfile("SaturnSettings.json"))
+			end)
+			if success and loadedSettings then
+				settings = loadedSettings
+			end
 		end
-		if not settings.Theme then
-			settings.Theme = "Saturn"
-		end
+		-- Set defaults for any missing settings
+		if not settings.Theme then settings.Theme = "Saturn" end
+		if not settings.ToggleKey then settings.ToggleKey = "Delete" end
+		if settings.LockDragging == nil then settings.LockDragging = true end
+		if not settings.DragSpeed then settings.DragSpeed = 14 end
+		
 		updateSettings = function(property, value)
 			settings[property] = value
-			writefile("SaturnSettings.json", HTTPService:JSONEncode(settings))
+			pcall(function()
+				writefile("SaturnSettings.json", HTTPService:JSONEncode(settings))
+			end)
 		end
 	end
 	
@@ -904,20 +917,24 @@ function Library:create(options)
 	local toggleKeybind = settingsTab:keybind{
 		Name = "Toggle Key",
 		Description = "Key to show/hide the UI.",
-		Keybind = Enum.KeyCode.Delete,
+		Keybind = Enum.KeyCode[settings.ToggleKey] or Enum.KeyCode.Delete,
 		Callback = function()
 			self.Toggled = not self.Toggled
 			Library:show(self.Toggled)
 		end,
+		OnChange = function(keycode)
+			updateSettings("ToggleKey", keycode.Name)
+		end
 	}
 	mt.toggleKeybind = toggleKeybind
 
 	settingsTab:toggle{
 		Name = "Lock Dragging",
 		Description = "Makes sure you can't drag the UI outside of the window.",
-		StartingState = true,
+		StartingState = settings.LockDragging,
 		Callback = function(state)
 			Library.LockDragging = state
+			updateSettings("LockDragging", state)
 		end,
 	}
 
@@ -925,9 +942,10 @@ function Library:create(options)
 		Name = "UI Drag Speed",
 		Description = "How smooth the dragging looks.",
 		Max = 20,
-		Default = 14,
+		Default = settings.DragSpeed,
 		Callback = function(value)
 			Library.DragSpeed = (20 - value)/100
+			updateSettings("DragSpeed", value)
 		end,
 	}
 
@@ -3020,7 +3038,8 @@ function Library:keybind(options)
 		Name = "Keybind",
 		Keybind = nil,
 		Description = nil,
-		Callback = function() end
+		Callback = function() end,
+		OnChange = function(keycode) end
 	}, options)
 
 	local keybindContainer = self.container:object("TextButton", {
@@ -3097,6 +3116,7 @@ function Library:keybind(options)
 				if key.UserInputType == Enum.UserInputType.Keyboard then
 					if key.KeyCode ~= Enum.KeyCode.Escape then
 						options.Keybind = key.KeyCode
+						options.OnChange(key.KeyCode)
 					end
 					keybindDisplay.Text = (options.Keybind and tostring(options.Keybind.Name):upper()) or "?"
 					keybindDisplay:tween{Size = UDim2.fromOffset(keybindDisplay.TextBounds.X + 20, 20), Length = 0.05}
