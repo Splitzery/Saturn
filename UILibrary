@@ -1011,7 +1011,7 @@ function Library:create(options)
 				-- Correct key - Close key tab and enable everything
 				Library.keyLocked = false
 				for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
-					if tabButton:IsA("TextButton") then
+					if tabButton:IsA("TextButton") and tabButton ~= keyTabButton then
 						tabButton.Visible = true
 						tabButton.Active = true
 					end
@@ -1028,12 +1028,11 @@ function Library:create(options)
 						break
 					end
 				end
-				-- Switch to home tab and close key tab permanently
+				-- Switch to home tab and hide key tab permanently
 				homePage.Visible = true
 				keyTab.container.Visible = false
-				keyTab.container:Destroy()
 				keyTabButton.Visible = false
-				keyTabButton:Destroy()
+				keyTabButton.Parent = mt.nilFolder.AbsoluteObject
 				selectedTab = homeButton
 				homeButton.BackgroundTransparency = 0.15
 				Library.UrlLabel.Text = Library.Url .. "/home"
