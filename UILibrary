@@ -898,9 +898,11 @@ function Library:create(options)
 		quickAccess = quickAccess,
 		homeButton = homeButton,
 		homePage = homePage,
-		nilFolder = core:object("Folder"),
-		keyLocked = true
+		nilFolder = core:object("Folder")
 	}, Library)
+	
+	-- Set key lock flag on Library object
+	Library.keyLocked = true
 
 	-- Create Key Tab
 	local keyTab = Library.tab(mt, {
@@ -1000,12 +1002,12 @@ function Library:create(options)
 			if enteredKey == "" then
 				mt:notification({
 					Title = "Key Required",
-					Text = "Please enter a key",
+					Text = "Please enter a key.",
 					Duration = 3
 				})
 			elseif enteredKey == "Colin" then
 				-- Correct key - Close key tab and enable everything
-				mt.keyLocked = false
+				Library.keyLocked = false
 				for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
 					if tabButton:IsA("TextButton") then
 						tabButton.Visible = true
@@ -1379,7 +1381,7 @@ function Library:tab(options)
 		tabButton.MouseButton1Click:Connect(function()
 			if not tabButton.Active then return end
 			-- Prevent any tab switching if UI is key locked
-			if self.keyLocked then return end
+			if Library.keyLocked then return end
 			for _, tabInfo in next, self.Tabs do
 				local page = tabInfo[1]
 				local button = tabInfo[2]
@@ -1402,6 +1404,8 @@ function Library:tab(options)
 
 		quickAccessButton.MouseButton1Click:connect(function()
 			if not tabButton.Active then return end
+			-- Prevent any tab switching if UI is key locked
+			if Library.keyLocked then return end
 			if not tabButton.Visible then
 				tabButton.Parent = self.navigation.AbsoluteObject
 				tabButton.Size = UDim2.new(0, 50, tabButton.Size.Y.Scale, tabButton.Size.Y.Offset)
