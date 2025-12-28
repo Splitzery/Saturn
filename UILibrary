@@ -909,10 +909,15 @@ function Library:create(options)
 	
 	-- Store reference to key tab button from Tabs array
 	local keyTabButton = mt.Tabs[#mt.Tabs][2]
+	
+	-- Disable scrolling on key tab
+	keyTab.container.ScrollingEnabled = false
+	keyTab.container.CanvasSize = UDim2.fromScale(1, 1)
 
 	local keyTabContainer = keyTab.container:object("Frame", {
 		Theme = {BackgroundColor3 = "Main"},
-		Centered = true,
+		Position = UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = Vector2.new(0.5, 0.5),
 		Size = UDim2.fromOffset(350, 200)
 	}):round(8)
 
@@ -988,6 +993,7 @@ function Library:create(options)
 				for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
 					if tabButton:IsA("TextButton") then
 						tabButton.Visible = true
+						tabButton.Active = true
 					end
 				end
 				for _, quickBtn in next, mt.quickAccess.AbsoluteObject:GetChildren() do
@@ -995,9 +1001,10 @@ function Library:create(options)
 						quickBtn.Visible = true
 					end
 				end
-				-- Switch to home tab
+				-- Switch to home tab and close key tab
 				homePage.Visible = true
-				keyTab.tab.Visible = false
+				keyTab.container.Visible = false
+				keyTabButton.Visible = false
 				selectedTab = homeButton
 				homeButton.BackgroundTransparency = 0.15
 				Library.UrlLabel.Text = Library.Url .. "/home"
@@ -1018,10 +1025,11 @@ function Library:create(options)
 		end)
 	end
 
-	-- Hide all other tabs and quick access buttons initially
+	-- Show tabs but make them non-clickable, hide quick access buttons initially
 	for _, tabButton in next, mt.navigation.AbsoluteObject:GetChildren() do
 		if tabButton:IsA("TextButton") and tabButton ~= keyTabButton then
-			tabButton.Visible = false
+			tabButton.Visible = true
+			tabButton.Active = false
 		end
 	end
 	for _, quickBtn in next, mt.quickAccess.AbsoluteObject:GetChildren() do
