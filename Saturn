@@ -14,10 +14,190 @@ local kickingTab = gui:tab{
     Name = "Kicking"
 }
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local autoKickEnabled = false
+local kickConnection = nil
+
+local function findKickerGui()
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+    return playerGui:FindFirstChild("KickerGui")
+end
+
+local function clickAtPosition(guiObject)
+    local pos = guiObject.AbsolutePosition
+    local size = guiObject.AbsoluteSize
+    local centerX = pos.X + size.X / 2
+    local centerY = pos.Y + size.Y / 2
+    
+    -- Move mouse to position and click
+    mousemoveabs(centerX, centerY)
+    task.wait(0.01)
+    mouse1click()
+end
+
+local function startAutoKick()
+    kickConnection = task.spawn(function()
+        while autoKickEnabled do
+            -- Wait for KickerGui to appear
+            local kickerGui = nil
+            while autoKickEnabled and not kickerGui do
+                kickerGui = findKickerGui()
+                task.wait(0.1)
+            end
+            
+            if not autoKickEnabled then break end
+            
+            gui:notification({
+                Title = "Debug",
+                Text = "KickerGui found!",
+                Duration = 1
+            })
+            
+            local meter = kickerGui:FindFirstChild("Meter")
+            if not meter then
+                gui:notification({
+                    Title = "Debug",
+                    Text = "Meter not found!",
+                    Duration = 2
+                })
+                task.wait(0.5)
+                continue
+            end
+            
+            local cursor = meter:FindFirstChild("Cursor")
+            if not cursor then
+                gui:notification({
+                    Title = "Debug",
+                    Text = "Cursor not found!",
+                    Duration = 2
+                })
+                task.wait(0.5)
+                continue
+            end
+            
+            gui:notification({
+                Title = "Debug",
+                Text = "Cursor found, waiting for movement...",
+                Duration = 1
+            })
+            
+            -- Wait for player to manually start the kick (cursor begins moving)
+            local initialPos = cursor.Position.Y.Scale
+            local cursorStarted = false
+            
+            while autoKickEnabled and not cursorStarted do
+                task.wait(0.05)
+                local currentPos = cursor.Position.Y.Scale
+                if math.abs(currentPos - initialPos) > 0.01 then
+                    cursorStarted = true
+                    gui:notification({
+                        Title = "Debug",
+                        Text = "Cursor movement detected!",
+                        Duration = 1
+                    })
+                end
+            end
+            
+            if not autoKickEnabled then break end
+            
+            -- Now automate the kick
+            local lastPosition = cursor.Position.Y.Scale
+            local stage = "power" -- power, accuracy, complete
+            local powerClicked = false
+            local accuracyClicked = false
+            
+            local renderConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                if not cursor or not cursor.Parent then
+                    return
+                end
+                
+                local currentPos = cursor.Position.Y.Scale
+                local movingUp = currentPos < lastPosition
+                
+                -- Power stage - click when at 0.05
+                if stage == "power" and movingUp and currentPos <= 0.05 and not powerClicked then
+                    gui:notification({
+                        Title = "Debug",
+                        Text = "Power click at " .. tostring(math.floor(currentPos * 100)),
+                        Duration = 1
+                    })
+                    clickAtPosition(cursor)
+                    powerClicked = true
+                    stage = "accuracy"
+                end
+                
+                -- Accuracy stage - click when cursor comes back down to 0.85-0.95
+                if stage == "accuracy" and not movingUp and currentPos >= 0.85 and not accuracyClicked then
+                    local randomOffset = math.random(-20, 20) / 1000 -- -0.02 to 0.02 variation
+                    if currentPos >= (0.9 + randomOffset) then
+                        gui:notification({
+                            Title = "Debug",
+                            Text = "Accuracy click at " .. tostring(math.floor(currentPos * 100)),
+                            Duration = 1
+                        })
+                        clickAtPosition(cursor)
+                        accuracyClicked = true
+                        stage = "complete"
+                    end
+                end
+                
+                lastPosition = currentPos
+            end)
+            
+            -- Wait for kick to complete (GUI disappears or stage is complete)
+            while autoKickEnabled and kickerGui.Parent and stage ~= "complete" do
+                task.wait(0.1)
+            end
+            
+            renderConnection:Disconnect()
+            
+            gui:notification({
+                Title = "Debug",
+                Text = "Kick complete, waiting for next...",
+                Duration = 1
+            })
+            
+            -- Wait for KickerGui to disappear before looking for next one
+            while autoKickEnabled and kickerGui and kickerGui.Parent do
+                task.wait(0.1)
+            end
+            
+            -- Wait a moment before checking for next kick
+            task.wait(0.5)
+        end
+    end)
+end
+
+local function stopAutoKick()
+    autoKickEnabled = false
+    if kickConnection then
+        task.cancel(kickConnection)
+        kickConnection = nil
+    end
+end
+
 kickingTab:toggle{
     Name = "Auto-Kick",
     StartingState = false,
     Callback = function(state)
-        
+        autoKickEnabled = state
+        if state then
+            startAutoKick()
+            gui:notification({
+                Title = "Auto-Kick",
+                Text = "Auto-Kick enabled!",
+                Duration = 2
+            })
+        else
+            stopAutoKick()
+            gui:notification({
+                Title = "Auto-Kick",
+                Text = "Auto-Kick disabled!",
+                Duration = 2
+            })
+        end
     end
 }

@@ -229,6 +229,7 @@ local selectedTab
 Library._promptExists = false
 Library._colorPickerExists = false
 Library._closeNotificationShown = false
+Library._notificationsEnabled = true
 Library._promptDarkener = nil
 Library._isAnimating = false
 Library._pendingToggle = nil
@@ -570,7 +571,8 @@ function Library:create(options)
 		Theme = "Saturn",
 		ToggleKey = "Delete",
 		LockDragging = true,
-		DragSpeed = 14
+		DragSpeed = 14,
+		Notifications = true
 	}
 
 	if readfile and writefile and isfile then
@@ -589,9 +591,17 @@ function Library:create(options)
 		if not settings.ToggleKey then settings.ToggleKey = "Delete" end
 		if settings.LockDragging == nil then settings.LockDragging = true end
 		if not settings.DragSpeed then settings.DragSpeed = 14 end
+		if settings.Notifications == nil then settings.Notifications = true end
+		
+		-- Update global notifications setting
+		Library._notificationsEnabled = settings.Notifications
 		
 		updateSettings = function(property, value)
 			settings[property] = value
+			-- Update global notifications setting if changed
+			if property == "Notifications" then
+				Library._notificationsEnabled = value
+			end
 			pcall(function()
 				writefile("SaturnSettings.json", HTTPService:JSONEncode(settings))
 			end)
@@ -1354,6 +1364,16 @@ function Library:create(options)
 		end,
 	}
 
+	settingsTab:toggle{
+		Name = "Notifications",
+		Description = "Enable or disable notifications.",
+		StartingState = settings.Notifications,
+		Callback = function(state)
+			Library._notificationsEnabled = state
+			updateSettings("Notifications", state)
+		end,
+	}
+
 	settingsTab:slider{
 		Name = "UI Drag Speed",
 		Description = "How smooth the dragging looks.",
@@ -1380,6 +1400,11 @@ function Library:create(options)
 end
 
 function Library:notification(options)
+	-- Check if notifications are disabled
+	if not Library._notificationsEnabled then
+		return
+	end
+	
 	options = self:set_defaults({
 		Title = "Notification",
 		Text = "Your character has been reset.",
