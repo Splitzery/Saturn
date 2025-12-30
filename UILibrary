@@ -3893,7 +3893,14 @@ function Library:slider(options)
 			while RunService.RenderStepped:wait() and down do
 				local percentage = math.clamp((Mouse.X - sliderBar.AbsolutePosition.X) / (sliderBar.AbsoluteSize.X), 0, 1)
 				local value = ((options.Max - options.Min) * percentage) + options.Min
-				value = math.floor(value)
+				
+				-- Apply increment if specified
+				if options.Increment then
+					value = math.floor(value / options.Increment + 0.5) * options.Increment
+				else
+					value = math.floor(value)
+				end
+				
 				valueText.Text = value
 				if tween.PlaybackState == Enum.PlaybackState.Completed then
 					tween = valueText:tween{Size = UDim2.fromOffset(valueText.TextBounds.X + 20, 20)}

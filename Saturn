@@ -10,36 +10,30 @@ local gui = Library:create{
 }
 
 local kickingTab = gui:tab{
-    Icon = "rbxassetid://6034996695",
+    Icon = "rbxassetid://98347771933836",
     Name = "Kicking"
+}
+
+local footballTab = gui:tab{
+    Icon = "rbxassetid://112379738525981",
+    Name = "Football"
 }
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
 
 local autoKickEnabled = false
-local kickConnection = nil
+local powerDeviation = 0 -- Percentage of error for power (0 = perfect, 5 = very random)
+local accuracyDeviation = 0 -- Percentage of error for accuracy (0 = perfect, 5 = very random)
 
 local function findKickerGui()
     local playerGui = LocalPlayer:WaitForChild("PlayerGui")
     return playerGui:FindFirstChild("KickerGui")
 end
 
-local function clickAtPosition(guiObject)
-    local pos = guiObject.AbsolutePosition
-    local size = guiObject.AbsoluteSize
-    local centerX = pos.X + size.X / 2
-    local centerY = pos.Y + size.Y / 2
-    
-    -- Move mouse to position and click
-    mousemoveabs(centerX, centerY)
-    task.wait(0.01)
-    mouse1click()
-end
-
 local function startAutoKick()
-    kickConnection = task.spawn(function()
+    task.spawn(function()
         while autoKickEnabled do
             -- Wait for KickerGui to appear
             local kickerGui = nil
@@ -50,38 +44,24 @@ local function startAutoKick()
             
             if not autoKickEnabled then break end
             
-            gui:notification({
-                Title = "Debug",
-                Text = "KickerGui found!",
-                Duration = 1
-            })
-            
-            local meter = kickerGui:FindFirstChild("Meter")
-            if not meter then
-                gui:notification({
-                    Title = "Debug",
-                    Text = "Meter not found!",
-                    Duration = 2
-                })
-                task.wait(0.5)
-                continue
+            -- Find cursor by searching descendants (meter name can change)
+            local cursor = nil
+            for _, descendant in pairs(kickerGui:GetDescendants()) do
+                if descendant.Name == "Cursor" and descendant:IsA("GuiObject") then
+                    cursor = descendant
+                    break
+                end
             end
             
-            local cursor = meter:FindFirstChild("Cursor")
             if not cursor then
-                gui:notification({
-                    Title = "Debug",
-                    Text = "Cursor not found!",
-                    Duration = 2
-                })
                 task.wait(0.5)
                 continue
             end
             
             gui:notification({
-                Title = "Debug",
-                Text = "Cursor found, waiting for movement...",
-                Duration = 1
+                Title = "Kicking",
+                Text = "Waiting for kick...",
+                Duration = 2
             })
             
             -- Wait for player to manually start the kick (cursor begins moving)
@@ -93,11 +73,6 @@ local function startAutoKick()
                 local currentPos = cursor.Position.Y.Scale
                 if math.abs(currentPos - initialPos) > 0.01 then
                     cursorStarted = true
-                    gui:notification({
-                        Title = "Debug",
-                        Text = "Cursor movement detected!",
-                        Duration = 1
-                    })
                 end
             end
             
@@ -105,7 +80,7 @@ local function startAutoKick()
             
             -- Now automate the kick
             local lastPosition = cursor.Position.Y.Scale
-            local stage = "power" -- power, accuracy, complete
+            local stage = "power"
             local powerClicked = false
             local accuracyClicked = false
             
@@ -117,29 +92,94 @@ local function startAutoKick()
                 local currentPos = cursor.Position.Y.Scale
                 local movingUp = currentPos < lastPosition
                 
-                -- Power stage - click when at 0.05
-                if stage == "power" and movingUp and currentPos <= 0.05 and not powerClicked then
+                -- Power stage - click when cursor is moving up and near top
+                if stage == "power" and movingUp and not powerClicked and currentPos <= 0.07 then
+                    powerClicked = true
+                    
+                    local errorRange = powerDeviation / 100
+                    local randomOffset = math.random(0, powerDeviation * 10) / 1000
+                    local targetValue = 0.03 + randomOffset - errorRange/2
+                    
+                    -- Freeze cursor at target position
+                    local targetPosition = UDim2.new(cursor.Position.X.Scale, cursor.Position.X.Offset, targetValue, 0)
+                    cursor.Position = targetPosition
+                    
+                    local tracking = true
+                    task.spawn(function()
+                        while tracking do
+                            cursor.Position = targetPosition
+                            task.wait()
+                        end
+                    end)
+                    
+                    -- Wait and click (reduced wait for faster response)
+                    task.wait(0.03)
+                    
+                    for i = 1, 3 do
+                        local pos = cursor.AbsolutePosition
+                        local size = cursor.AbsoluteSize
+                        mousemoveabs(pos.X + size.X / 2, pos.Y + size.Y / 2)
+                        task.wait()
+                        mouse1click()
+                        task.wait()
+                    end
+                    
+                    tracking = false
+                    
+                    local powerPercent = math.floor(100 - (targetValue * 100))
                     gui:notification({
-                        Title = "Debug",
-                        Text = "Power click at " .. tostring(math.floor(currentPos * 100)),
+                        Title = "Kicking",
+                        Text = "Power: " .. powerPercent .. "%",
                         Duration = 1
                     })
-                    clickAtPosition(cursor)
-                    powerClicked = true
+                    
                     stage = "accuracy"
                 end
                 
-                -- Accuracy stage - click when cursor comes back down to 0.85-0.95
+                -- Accuracy stage - click when cursor comes back down
                 if stage == "accuracy" and not movingUp and currentPos >= 0.85 and not accuracyClicked then
-                    local randomOffset = math.random(-20, 20) / 1000 -- -0.02 to 0.02 variation
-                    if currentPos >= (0.9 + randomOffset) then
+                    local errorRange = accuracyDeviation / 100
+                    local randomOffset = math.random(-accuracyDeviation * 10, accuracyDeviation * 10) / 1000
+                    local targetValue = 0.9 + randomOffset
+                    
+                    if currentPos >= (targetValue - 0.02) then
+                        accuracyClicked = true
+                        
+                        -- Freeze cursor at target position
+                        local targetPosition = UDim2.new(cursor.Position.X.Scale, cursor.Position.X.Offset, targetValue, 0)
+                        cursor.Position = targetPosition
+                        
+                        local tracking = true
+                        task.spawn(function()
+                            while tracking do
+                                cursor.Position = targetPosition
+                                task.wait()
+                            end
+                        end)
+                        
+                        -- Wait and click
+                        task.wait(0.05)
+                        
+                        for i = 1, 3 do
+                            local pos = cursor.AbsolutePosition
+                            local size = cursor.AbsoluteSize
+                            mousemoveabs(pos.X + size.X / 2, pos.Y + size.Y / 2)
+                            task.wait()
+                            mouse1click()
+                            task.wait()
+                        end
+                        
+                        tracking = false
+                        
+                        -- Calculate accuracy based on deviation from perfect (0.9)
+                        local deviation = math.abs(targetValue - 0.9)
+                        local accuracyPercent = math.floor(100 - (deviation / 0.9 * 100))
                         gui:notification({
-                            Title = "Debug",
-                            Text = "Accuracy click at " .. tostring(math.floor(currentPos * 100)),
+                            Title = "Kicking",
+                            Text = "Accuracy: " .. accuracyPercent .. "%",
                             Duration = 1
                         })
-                        clickAtPosition(cursor)
-                        accuracyClicked = true
+                        
                         stage = "complete"
                     end
                 end
@@ -147,7 +187,7 @@ local function startAutoKick()
                 lastPosition = currentPos
             end)
             
-            -- Wait for kick to complete (GUI disappears or stage is complete)
+            -- Wait for kick to complete
             while autoKickEnabled and kickerGui.Parent and stage ~= "complete" do
                 task.wait(0.1)
             end
@@ -155,17 +195,16 @@ local function startAutoKick()
             renderConnection:Disconnect()
             
             gui:notification({
-                Title = "Debug",
-                Text = "Kick complete, waiting for next...",
+                Title = "Kicking",
+                Text = "Kick completed!",
                 Duration = 1
             })
             
-            -- Wait for KickerGui to disappear before looking for next one
+            -- Wait for KickerGui to disappear
             while autoKickEnabled and kickerGui and kickerGui.Parent do
                 task.wait(0.1)
             end
             
-            -- Wait a moment before checking for next kick
             task.wait(0.5)
         end
     end)
@@ -173,10 +212,6 @@ end
 
 local function stopAutoKick()
     autoKickEnabled = false
-    if kickConnection then
-        task.cancel(kickConnection)
-        kickConnection = nil
-    end
 end
 
 kickingTab:toggle{
@@ -199,5 +234,749 @@ kickingTab:toggle{
                 Duration = 2
             })
         end
+    end
+}
+
+kickingTab:slider{
+    Name = "Power Variation",
+    Description = "Higher = more random/natural power (0 = perfect, 5 = very random)",
+    Min = 0,
+    Max = 5,
+    Default = 0,
+    Callback = function(value)
+        powerDeviation = value
+    end
+}
+
+kickingTab:slider{
+    Name = "Accuracy Variation",
+    Description = "Higher = more random/natural accuracy (0 = perfect, 5 = very random)",
+    Min = 0,
+    Max = 5,
+    Default = 0,
+    Callback = function(value)
+        accuracyDeviation = value
+    end
+}
+
+-- Football Tab Features
+local magnetEnabled = false
+local magnetConnection = nil
+local magnetRange = 15
+local tackleReachEnabled = false
+local tackleConnection = nil
+local tackleRange = 15
+local lastMagnetFire = 0
+local magnetCooldown = 0.3
+local lastTackleFire = 0
+local tackleCooldown = 0.5
+local autoJumpEnabled = false
+local autoJumpConnection = nil
+local lastJump = 0
+local jumpCooldown = 0.5
+local lastBallPosition = nil
+local lastBallTime = nil
+local qbAimbotEnabled = false
+local qbConnection = nil
+local currentTarget = nil
+local targetHighlight = nil
+local trajectoryBeam = nil
+local namecallHook = nil
+local qbThrowDelay = 0.3
+local Mouse = LocalPlayer:GetMouse()
+local UserInputService = game:GetService("UserInputService")
+
+local function findFootball()
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and string.lower(obj.Name):find("football") then
+            return obj
+        end
+    end
+    return nil
+end
+
+local function startAutoJump()
+    autoJumpConnection = RunService.Heartbeat:Connect(function()
+        if not autoJumpEnabled then return end
+        
+        local character = LocalPlayer.Character
+        if not character then return end
+        
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not humanoid or not rootPart then return end
+        
+        -- Check cooldown
+        local currentTime = tick()
+        if currentTime - lastJump < jumpCooldown then return end
+        
+        -- Find football
+        local football = findFootball()
+        if not football then 
+            lastBallPosition = nil
+            lastBallTime = nil
+            return 
+        end
+        
+        local ballPosition = football.Position
+        local playerPosition = rootPart.Position
+        local distance = (ballPosition - playerPosition).Magnitude
+        
+        -- Calculate ball velocity (studs per second)
+        local ballVelocity = Vector3.new(0, 0, 0)
+        local isApproaching = false
+        
+        if lastBallPosition and lastBallTime then
+            local deltaTime = currentTime - lastBallTime
+            if deltaTime > 0 then
+                local deltaPosition = ballPosition - lastBallPosition
+                ballVelocity = deltaPosition / deltaTime
+                
+                -- Check if ball is moving toward player horizontally
+                local directionToPlayer = (playerPosition - ballPosition).Unit
+                local velocityDirection = ballVelocity.Unit
+                local dotProduct = velocityDirection:Dot(directionToPlayer)
+                
+                isApproaching = dotProduct > 0.3 -- Moving toward player
+                
+                -- Check vertical velocity - don't jump if ball is falling too fast
+                local verticalVelocity = ballVelocity.Y
+                local horizontalVelocity = Vector3.new(ballVelocity.X, 0, ballVelocity.Z).Magnitude
+                
+                -- If ball is falling (negative Y velocity) and moving mostly downward, don't jump
+                if verticalVelocity < 0 then
+                    local fallSpeed = math.abs(verticalVelocity)
+                    -- If falling faster than moving horizontally, it's landing at feet
+                    if fallSpeed > horizontalVelocity * 1.5 then
+                        return -- Ball landing at feet, don't jump
+                    end
+                end
+            end
+        end
+        
+        -- Store current ball position and time for next frame
+        lastBallPosition = ballPosition
+        lastBallTime = currentTime
+        
+        -- Calculate time until ball reaches player (if moving toward us)
+        local timeToReach = math.huge
+        if isApproaching and ballVelocity.Magnitude > 0 then
+            timeToReach = distance / ballVelocity.Magnitude
+        end
+        
+        -- Jump timing conditions:
+        -- 1. Ball is above character's head (at least 3 studs)
+        -- 2. Ball is approaching
+        -- 3. Time to reach is between 0.3 and 1.0 seconds (optimal jump window)
+        -- 4. Ball is not falling too steeply (checked above)
+        local isAboveHead = ballPosition.Y > (playerPosition.Y + 3)
+        local isInOptimalWindow = timeToReach >= 0.3 and timeToReach <= 1.0
+        local isInRange = distance <= 30
+        
+        if isAboveHead and isApproaching and isInOptimalWindow and isInRange then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            lastJump = currentTime
+        end
+    end)
+    
+    gui:notification({
+        Title = "Auto Jump",
+        Text = "Auto jump enabled!",
+        Duration = 2
+    })
+end
+
+local function stopAutoJump()
+    if autoJumpConnection then
+        autoJumpConnection:Disconnect()
+        autoJumpConnection = nil
+    end
+    lastBallPosition = nil
+    lastBallTime = nil
+    
+    gui:notification({
+        Title = "Auto Jump",
+        Text = "Auto jump disabled!",
+        Duration = 2
+    })
+end
+
+local function getTeammates()
+    local teammates = {}
+    
+    -- Get all players for testing
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                table.insert(teammates, player)
+            end
+        end
+    end
+    
+    return teammates
+end
+
+local function getClosestTeammate()
+    local teammates = getTeammates()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    
+    for _, player in pairs(teammates) do
+        local character = player.Character
+        if character then
+            local head = character:FindFirstChild("Head")
+            if head then
+                local screenPos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
+                
+                if onScreen then
+                    local mousePos = Vector2.new(Mouse.X, Mouse.Y)
+                    local targetPos = Vector2.new(screenPos.X, screenPos.Y)
+                    local distance = (mousePos - targetPos).Magnitude
+                    
+                    -- Within 150 pixels of cursor
+                    if distance < 150 and distance < shortestDistance then
+                        shortestDistance = distance
+                        closestPlayer = player
+                    end
+                end
+            end
+        end
+    end
+    
+    return closestPlayer
+end
+
+local function createHighlight(character)
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(0, 255, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Parent = character
+    return highlight
+end
+
+local function createTrajectoryBeam(startPos, endPos)
+    -- Clean up old beam
+    if trajectoryBeam then
+        trajectoryBeam:Destroy()
+    end
+    
+    -- Create attachments
+    local att0 = Instance.new("Attachment")
+    att0.Position = startPos
+    att0.Parent = workspace.Terrain
+    
+    local att1 = Instance.new("Attachment")
+    att1.Position = endPos
+    att1.Parent = workspace.Terrain
+    
+    -- Create beam
+    local beam = Instance.new("Beam")
+    beam.Attachment0 = att0
+    beam.Attachment1 = att1
+    beam.Color = ColorSequence.new(Color3.fromRGB(0, 255, 0))
+    beam.Width0 = 0.5
+    beam.Width1 = 0.5
+    beam.Transparency = NumberSequence.new(0.3)
+    beam.FaceCamera = true
+    beam.Parent = workspace.Terrain
+    
+    trajectoryBeam = beam
+    
+    -- Store attachments for cleanup
+    beam.Attachment0 = att0
+    beam.Attachment1 = att1
+end
+
+local function throwBallToTarget(targetCharacter)
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    local targetRoot = targetCharacter:FindFirstChild("HumanoidRootPart")
+    
+    if not rootPart or not targetRoot then return end
+    
+    -- Calculate direction to target
+    local direction = (targetRoot.Position - rootPart.Position).Unit
+    
+    -- Calculate lead (predict where they'll be)
+    local targetVelocity = targetRoot.AssemblyLinearVelocity
+    local distance = (targetRoot.Position - rootPart.Position).Magnitude
+    local ballSpeed = 95 -- From the args
+    local timeToReach = distance / ballSpeed
+    local leadPosition = targetRoot.Position + (targetVelocity * timeToReach)
+    
+    -- Recalculate direction with lead
+    direction = (leadPosition - rootPart.Position).Unit
+    
+    -- Scale direction by power
+    local throwVelocity = direction * ballSpeed
+    
+    -- Fire the remote
+    local args = {
+        "Clicked",
+        Vector3.new(throwVelocity.X, throwVelocity.Y, throwVelocity.Z),
+        rootPart.Position,
+        95,
+        1 -- Bullet pass
+    }
+    
+    local football = workspace:FindFirstChild("Football")
+    if football then
+        local remoteEvent = football:FindFirstChild("RemoteEvent")
+        if remoteEvent then
+            remoteEvent:FireServer(unpack(args))
+        end
+    end
+end
+
+local function startQBAimbot()
+    -- Monitor character for Football tool and delete its RemoteEvent
+    local character = LocalPlayer.Character
+    if character then
+        character.ChildAdded:Connect(function(child)
+            if child:IsA("Tool") and child.Name == "Football" and qbAimbotEnabled then
+                print("[QB AIMBOT] Football tool equipped!")
+                task.wait(0.1)
+                local handle = child:FindFirstChild("Handle")
+                if handle then
+                    print("[QB AIMBOT] Found Handle in Football")
+                    local remoteEvent = handle:FindFirstChild("RemoteEvent")
+                    if remoteEvent then
+                        remoteEvent:Destroy()
+                        print("[QB AIMBOT] ✓ Deleted RemoteEvent from Football Handle!")
+                    else
+                        print("[QB AIMBOT] ✗ No RemoteEvent in Handle")
+                    end
+                else
+                    print("[QB AIMBOT] ✗ No Handle in Football")
+                end
+            end
+        end)
+        
+        -- Check if already holding football
+        local football = character:FindFirstChild("Football")
+        if football and football:IsA("Tool") then
+            print("[QB AIMBOT] Already holding football!")
+            local handle = football:FindFirstChild("Handle")
+            if handle then
+                print("[QB AIMBOT] Found Handle")
+                local remoteEvent = handle:FindFirstChild("RemoteEvent")
+                if remoteEvent then
+                    remoteEvent:Destroy()
+                    print("[QB AIMBOT] ✓ Deleted existing RemoteEvent!")
+                end
+            end
+        end
+    end
+    
+    -- Monitor for when Football is equipped
+    LocalPlayer.CharacterAdded:Connect(function(char)
+        char.ChildAdded:Connect(function(child)
+            if child:IsA("Tool") and child.Name == "Football" and qbAimbotEnabled then
+                task.wait(0.1)
+                local handle = child:FindFirstChild("Handle")
+                if handle then
+                    local remoteEvent = handle:FindFirstChild("RemoteEvent")
+                    if remoteEvent then
+                        remoteEvent:Destroy()
+                        print("[QB AIMBOT] Deleted RemoteEvent on new character!")
+                    end
+                end
+            end
+        end)
+    end)
+    
+    -- Hook click to fire custom throw
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if not qbAimbotEnabled or gameProcessed then return end
+        
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            print("[QB AIMBOT] Click detected!")
+            
+            local character = LocalPlayer.Character
+            if not character then 
+                print("[QB AIMBOT] ✗ No character")
+                return 
+            end
+            
+            local football = character:FindFirstChild("Football")
+            if not football or not football:IsA("Tool") then 
+                print("[QB AIMBOT] ✗ No football equipped")
+                return 
+            end
+            
+            print("[QB AIMBOT] ✓ Football equipped")
+            
+            if currentTarget and currentTarget.Character then
+                print("[QB AIMBOT] ✓ Target:", currentTarget.Name)
+                
+                local rootPart = character:FindFirstChild("HumanoidRootPart")
+                local targetRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+                
+                if rootPart and targetRoot then
+                    -- Calculate perfect throw
+                    local targetVelocity = targetRoot.AssemblyLinearVelocity
+                    local distance = (targetRoot.Position - rootPart.Position).Magnitude
+                    local timeToReach = distance / 95
+                    local leadPosition = targetRoot.Position + (targetVelocity * timeToReach)
+                    
+                    local direction = (leadPosition - rootPart.Position).Unit
+                    local velocityScale = math.clamp(distance / 10, 5, 120)
+                    local throwVelocity = direction * velocityScale
+                    
+                    print("[QB AIMBOT] Distance:", distance, "Velocity:", velocityScale)
+                    
+                    -- Try to find RemoteEvent in workspace player folder
+                    local playerInWorkspace = workspace:FindFirstChild(LocalPlayer.Name)
+                    if playerInWorkspace then
+                        print("[QB AIMBOT] Found player in workspace")
+                        local workspaceFootball = playerInWorkspace:FindFirstChild("Football")
+                        if workspaceFootball then
+                            print("[QB AIMBOT] Found Football in workspace")
+                            local handle = workspaceFootball:FindFirstChild("Handle")
+                            if handle then
+                                print("[QB AIMBOT] Found Handle")
+                                local workspaceRemote = handle:FindFirstChild("RemoteEvent")
+                                if workspaceRemote then
+                                    print("[QB AIMBOT] ✓ Found RemoteEvent, firing in " .. qbThrowDelay .. "s!")
+                                    
+                                    task.wait(qbThrowDelay)
+                                    
+                                    local args = {
+                                        "Clicked",
+                                        rootPart.Position,
+                                        Vector3.new(throwVelocity.X, throwVelocity.Y, throwVelocity.Z),
+                                        95
+                                    }
+                                    workspaceRemote:FireServer(unpack(args))
+                                    print("[QB AIMBOT] ✓ Custom throw fired!")
+                                else
+                                    print("[QB AIMBOT] ✗ No RemoteEvent in Handle")
+                                end
+                            else
+                                print("[QB AIMBOT] ✗ No Handle in Football")
+                            end
+                        else
+                            print("[QB AIMBOT] ✗ No Football in workspace")
+                        end
+                    else
+                        print("[QB AIMBOT] ✗ Player not in workspace")
+                    end
+                else
+                    print("[QB AIMBOT] ✗ Missing rootPart or targetRoot")
+                end
+            else
+                print("[QB AIMBOT] ✗ No target (hover near a player)")
+            end
+        end
+    end)
+    
+    qbConnection = RunService.RenderStepped:Connect(function()
+        if not qbAimbotEnabled then return end
+        
+        local character = LocalPlayer.Character
+        if not character then return end
+        
+        -- Find closest teammate to cursor
+        local closestTeammate = getClosestTeammate()
+        
+        -- Update highlight
+        if currentTarget ~= closestTeammate then
+            -- Remove old highlight
+            if targetHighlight then
+                targetHighlight:Destroy()
+                targetHighlight = nil
+            end
+            
+            -- Add new highlight
+            if closestTeammate and closestTeammate.Character then
+                targetHighlight = createHighlight(closestTeammate.Character)
+            end
+            
+            currentTarget = closestTeammate
+        end
+        
+        -- Draw trajectory
+        if currentTarget and currentTarget.Character then
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            local targetRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+            
+            if rootPart and targetRoot then
+                -- Predict target position
+                local targetVelocity = targetRoot.AssemblyLinearVelocity
+                local distance = (targetRoot.Position - rootPart.Position).Magnitude
+                local timeToReach = distance / 95
+                local leadPosition = targetRoot.Position + (targetVelocity * timeToReach)
+                
+                createTrajectoryBeam(rootPart.Position, leadPosition)
+            end
+        else
+            -- No target, remove beam
+            if trajectoryBeam then
+                trajectoryBeam:Destroy()
+                trajectoryBeam = nil
+            end
+        end
+    end)
+    
+    gui:notification({
+        Title = "QB Aimbot",
+        Text = "QB Aimbot enabled! Hover over players and click to throw.",
+        Duration = 3
+    })
+end
+
+local function stopQBAimbot()
+    if qbConnection then
+        qbConnection:Disconnect()
+        qbConnection = nil
+    end
+    
+    if targetHighlight then
+        targetHighlight:Destroy()
+        targetHighlight = nil
+    end
+    
+    if trajectoryBeam then
+        trajectoryBeam:Destroy()
+        trajectoryBeam = nil
+    end
+    
+    currentTarget = nil
+    
+    gui:notification({
+        Title = "QB Aimbot",
+        Text = "QB Aimbot disabled!",
+        Duration = 2
+    })
+end
+
+local function startMagnet()
+    magnetConnection = RunService.Heartbeat:Connect(function()
+        if not magnetEnabled then return end
+        
+        local football = findFootball()
+        local character = LocalPlayer.Character
+        
+        if football and character then
+            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+            if humanoidRootPart then
+                local distance = (football.Position - humanoidRootPart.Position).Magnitude
+                
+                -- Check if ball is on the ground (raycast downward)
+                local rayOrigin = football.Position
+                local rayDirection = Vector3.new(0, -5, 0)
+                local raycastParams = RaycastParams.new()
+                raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                raycastParams.FilterDescendantsInstances = {character, football}
+                
+                local rayResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+                local isOnGround = rayResult and rayResult.Distance < 2
+                
+                -- Cooldown check to prevent spam
+                local currentTime = tick()
+                if currentTime - lastMagnetFire < magnetCooldown then
+                    return
+                end
+                
+                -- Only fire touch interest if within range AND ball is NOT on ground
+                if distance <= magnetRange and not isOnGround then
+                    lastMagnetFire = currentTime
+                    
+                    -- Only fire on key body parts instead of all descendants
+                    local keyParts = {
+                        character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso"),
+                        character:FindFirstChild("Left Arm") or character:FindFirstChild("LeftUpperArm"),
+                        character:FindFirstChild("Right Arm") or character:FindFirstChild("RightUpperArm")
+                    }
+                    
+                    for _, part in pairs(keyParts) do
+                        if part then
+                            firetouchinterest(part, football, 0)
+                            firetouchinterest(part, football, 1)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+    
+    gui:notification({
+        Title = "Football Magnet",
+        Text = "Auto-catch (in-air only, 15 studs)",
+        Duration = 2
+    })
+end
+
+local function stopMagnet()
+    if magnetConnection then
+        magnetConnection:Disconnect()
+        magnetConnection = nil
+    end
+    
+    gui:notification({
+        Title = "Football Magnet",
+        Text = "Magnet disabled!",
+        Duration = 2
+    })
+end
+
+local function findBallCarrier()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local character = player.Character
+            for _, item in pairs(character:GetChildren()) do
+                if item:IsA("Tool") and item.Name == "Football" then
+                    return character
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function startTackleReach()
+    tackleConnection = RunService.Heartbeat:Connect(function()
+        if not tackleReachEnabled then return end
+        
+        -- Cooldown check to prevent spam
+        local currentTime = tick()
+        if currentTime - lastTackleFire < tackleCooldown then
+            return
+        end
+        
+        local ballCarrier = findBallCarrier()
+        local character = LocalPlayer.Character
+        
+        if ballCarrier and character then
+            local myTorso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+            local theirTorso = ballCarrier:FindFirstChild("Torso") or ballCarrier:FindFirstChild("UpperTorso")
+            local myHumanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+            local theirHumanoidRootPart = ballCarrier:FindFirstChild("HumanoidRootPart")
+            
+            if myTorso and theirTorso and myHumanoidRootPart and theirHumanoidRootPart then
+                local distance = (myHumanoidRootPart.Position - theirHumanoidRootPart.Position).Magnitude
+                
+                -- Fire touch interest if within range
+                if distance <= tackleRange then
+                    lastTackleFire = currentTime
+                    firetouchinterest(myTorso, theirTorso, 0)
+                    firetouchinterest(myTorso, theirTorso, 1)
+                end
+            end
+        end
+    end)
+    
+    gui:notification({
+        Title = "Tackle Reach",
+        Text = "Tackle reach enabled (15 studs)",
+        Duration = 2
+    })
+end
+
+local function stopTackleReach()
+    if tackleConnection then
+        tackleConnection:Disconnect()
+        tackleConnection = nil
+    end
+    
+    gui:notification({
+        Title = "Tackle Reach",
+        Text = "Tackle reach disabled!",
+        Duration = 2
+    })
+end
+
+footballTab:toggle{
+    Name = "Football Magnet",
+    Description = "Auto-catch football within 15 studs",
+    StartingState = false,
+    Callback = function(state)
+        magnetEnabled = state
+        if state then
+            startMagnet()
+        else
+            stopMagnet()
+        end
+    end
+}
+
+footballTab:slider{
+    Name = "Magnet Range",
+    Description = "Catch range in studs (max 15)",
+    Min = 5,
+    Max = 15,
+    Default = 15,
+    Callback = function(value)
+        magnetRange = value
+    end
+}
+
+footballTab:toggle{
+    Name = "Tackle Reach",
+    Description = "Auto-tackle ball carrier within 15 studs",
+    StartingState = false,
+    Callback = function(state)
+        tackleReachEnabled = state
+        if state then
+            startTackleReach()
+        else
+            stopTackleReach()
+        end
+    end
+}
+
+footballTab:slider{
+    Name = "Tackle Range",
+    Description = "Tackle range in studs (max 15)",
+    Min = 5,
+    Max = 15,
+    Default = 15,
+    Callback = function(value)
+        tackleRange = value
+    end
+}
+
+footballTab:toggle{
+    Name = "Auto Jump",
+    Description = "Automatically jump when football is above you and approaching",
+    StartingState = false,
+    Callback = function(state)
+        autoJumpEnabled = state
+        if state then
+            startAutoJump()
+        else
+            stopAutoJump()
+        end
+    end
+}
+
+footballTab:toggle{
+    Name = "QB Aimbot",
+    Description = "Perfect bullet passes to teammates. Hover near them and click to throw.",
+    StartingState = false,
+    Callback = function(state)
+        qbAimbotEnabled = state
+        if state then
+            startQBAimbot()
+        else
+            stopQBAimbot()
+        end
+    end
+}
+
+footballTab:slider{
+    Name = "QB Throw Delay",
+    Description = "Delay in seconds before firing the throw (0.1-5.0s)",
+    Min = 0.1,
+    Max = 5,
+    Default = 0.3,
+    Increment = 0.1,
+    Callback = function(value)
+        qbThrowDelay = value
     end
 }
