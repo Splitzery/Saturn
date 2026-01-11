@@ -728,7 +728,8 @@ function Library:create(options)
 
 	core:fade(false, nil, 0.4)
 	core:tween({Size = options.Size, Length = 0.3}, function()
-		core.ClipsDescendants = false
+		-- Keep clipping enabled for glare animation
+		core.ClipsDescendants = true
 		
 		-- Glare animation after UI opens
 		local glare = core:object("Frame", {
@@ -759,6 +760,8 @@ function Library:create(options)
 			Direction = Enum.EasingDirection.Out
 		}, function()
 			glare.AbsoluteObject:Destroy()
+			-- Disable clipping after glare finishes
+			core.ClipsDescendants = false
 		end)
 	end)
 
