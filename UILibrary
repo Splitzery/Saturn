@@ -731,10 +731,10 @@ function Library:create(options)
 		-- Keep clipping enabled for glare animation
 		core.ClipsDescendants = true
 		
-		-- Glare animation after UI opens
+		-- Glare animation after UI opens - moves diagonally top-left to bottom-right
 		local glare = core:object("Frame", {
-			Size = UDim2.new(0, 100, 1.5, 0),
-			Position = UDim2.new(0, -100, -0.25, 0),
+			Size = UDim2.new(0, 80, 1.5, 0),
+			Position = UDim2.new(-0.15, 0, -0.3, 0),
 			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 			BackgroundTransparency = 0.7,
 			BorderSizePixel = 0,
@@ -752,9 +752,9 @@ function Library:create(options)
 		})
 		gradient.Parent = glare.AbsoluteObject
 		
-		-- Animate glare across the UI
+		-- Animate glare diagonally across the UI from top-left to bottom-right
 		glare:tween({
-			Position = UDim2.new(1, 0, -0.25, 0),
+			Position = UDim2.new(1.15, 0, 1.3, 0),
 			Length = 0.8,
 			Style = Enum.EasingStyle.Quad,
 			Direction = Enum.EasingDirection.Out
