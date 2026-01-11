@@ -729,6 +729,37 @@ function Library:create(options)
 	core:fade(false, nil, 0.4)
 	core:tween({Size = options.Size, Length = 0.3}, function()
 		core.ClipsDescendants = false
+		
+		-- Glare animation after UI opens
+		local glare = core:object("Frame", {
+			Size = UDim2.new(0, 100, 1.5, 0),
+			Position = UDim2.new(0, -100, -0.25, 0),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundTransparency = 0.7,
+			BorderSizePixel = 0,
+			ZIndex = 1000,
+			Rotation = 45
+		})
+		
+		-- Gradient for smoother glare effect
+		local gradient = Instance.new("UIGradient")
+		gradient.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.3, 0),
+			NumberSequenceKeypoint.new(0.7, 0),
+			NumberSequenceKeypoint.new(1, 1)
+		})
+		gradient.Parent = glare.AbsoluteObject
+		
+		-- Animate glare across the UI
+		glare:tween({
+			Position = UDim2.new(1, 0, -0.25, 0),
+			Length = 0.8,
+			Style = Enum.EasingStyle.Quad,
+			Direction = Enum.EasingDirection.Out
+		}, function()
+			glare.AbsoluteObject:Destroy()
+		end)
 	end)
 
 	do
