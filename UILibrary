@@ -81,15 +81,10 @@ local function GetSafeGuiParent()
 		end
 	end
 
-	local parent = SaturnRootGui
-	if not parent then
-		parent = CreateSaturnParentGui()
-		SaturnRootGui = parent
+	if not SaturnRootGui then
+		SaturnRootGui = CreateSaturnParentGui()
 	end
-	if parent and parent.Parent then
-		return parent
-	end
-	return nil
+	return SaturnRootGui
 end
 
 local function InstallSafeGuiShims(gui)
@@ -119,9 +114,6 @@ if not IsStudio then
 	InstallSafeGuiShims(SaturnRootGui)
 else
 	SaturnRootGui = LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") or nil
-end
-if SaturnRootGui and not SaturnRootGui.Parent then
-	SaturnRootGui = nil
 end
 
 local Saturn = {}
@@ -215,6 +207,10 @@ local DRAG_SMOOTH = 60
 local RESTORE_LEAD   = 0.20   -- into the 0.42 flight
 local RESTORE_FADE   = TweenInfo.new(0.12, Enum.EasingStyle.Quad,  Enum.EasingDirection.Out)
 local RESTORE_EXPAND = TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local PANEL_SHUT     = TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+
+-- Teardown: long enough to read as a dissolve rather than a pop.
+local DESTROY_OUT = TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local ADJUST_H = 22
 local ADJUST_W_FULL, ADJUST_W_MIN = 90, 69
@@ -536,6 +532,24 @@ local function BindAreaDrag(track, cb, conns, measure)
 			dragging = false
 		end
 	end))
+end
+
+-- Removing the CanvasGroups took GroupTransparency with them, so a teardown
+-- has to fade the tree by hand. One pass, only ever run once, at destroy.
+local function FadeOutTree(root, info)
+	for _, d in ipairs(root:GetDescendants()) do
+		if d:IsA("GuiObject") then
+			Tween(d, info, { BackgroundTransparency = 1 })
+			if d:IsA("TextLabel") or d:IsA("TextBox") or d:IsA("TextButton") then
+				Tween(d, info, { TextTransparency = 1 })
+			end
+			if d:IsA("ImageLabel") or d:IsA("ImageButton") then
+				Tween(d, info, { ImageTransparency = 1 })
+			end
+		elseif d:IsA("UIStroke") then
+			Tween(d, info, { Transparency = 1 })
+		end
+	end
 end
 
 local function DisconnectAll(list)
@@ -2655,38 +2669,37 @@ function Window:Minimize()
 
 	self:_tuckSearch()
 
-	self.Body.ClipsDescendants = true
-	Tween(self.Body, COLLAPSE, { Size = UDim2.new(1, 0, 0, 0) })
+	-- The whole assembly travels: the pill stays attached to Root, so the
+	-- panel rides up with it and closes at the top bar. No reparenting, and
+	-- therefore no coordinate conversion to get wrong.
+	self.RestorePos = self.Root.Position
 
-	task.delay(0.26, function()
-		if not self.Body.Parent then return end
+	-- Root is centre-anchored, so park it where the pill (at -28 relative)
+	-- lands on TOPBAR_Y.
+	local h = self.Root.AbsoluteSize.Y
+	Tween(self.Root, DOCK, {
+		Position = UDim2.new(0.5, 0, 0, TOPBAR_Y + 28 + h / 2),
+	})
+
+	Tween(self.AdjustFrame, SLIDE, { Size = UDim2.new(0, ADJUST_W_MIN, 0, ADJUST_H) })
+	Tween(self.CloseBtn,  SLIDE, { Position = UDim2.new(0, LIGHT_MIN.Close,  0.5, -6) })
+	Tween(self.ExpandBtn, SLIDE, { Position = UDim2.new(0, LIGHT_MIN.Expand, 0.5, -6) })
+	Tween(self.MinimizeBtn, RESTORE_FADE, { BackgroundTransparency = 1 })
+
+	self.Body.ClipsDescendants = true
+	Tween(self.Body, PANEL_SHUT, { Size = UDim2.new(1, 0, 0, 0) })
+
+	task.delay(0.12, function()
+		if self.Minimized then self.MinimizeBtn.Visible = false end
+	end)
+
+	task.delay(0.22, function()
+		if not self.Body.Parent or not self.Minimized then return end
 		self.Body.Visible = false
 		self.Body.Size = UDim2.new(1, 0, 1, 0)
-
-		Tween(self.MinimizeBtn, FADE, { BackgroundTransparency = 1 })
-
-		task.delay(0.18, function()
-			local a = self.AdjustFrame
-			if not a.Parent then return end
-			self.MinimizeBtn.Visible = false
-
-			-- Hand the pill over to the ScreenGui without moving it, so the
-			-- flight to the top bar is in screen space rather than panel space.
-			a.Position = UDim2.new(
-				0, a.AbsolutePosition.X + a.AbsoluteSize.X / 2,
-				0, a.AbsolutePosition.Y)
-			a.Parent = self.Gui
-
-			Tween(a, DOCK, {
-				Position = UDim2.new(0.5, 0, 0, TOPBAR_Y),
-				Size = UDim2.new(0, ADJUST_W_MIN, 0, ADJUST_H),
-			})
-			Tween(self.CloseBtn,  SLIDE, { Position = UDim2.new(0, LIGHT_MIN.Close,  0.5, -6) })
-			Tween(self.ExpandBtn, SLIDE, { Position = UDim2.new(0, LIGHT_MIN.Expand, 0.5, -6) })
-
-			task.delay(DOCK_TIME, function() self.Animating = false end)
-		end)
 	end)
+
+	task.delay(DOCK_TIME, function() self.Animating = false end)
 end
 
 function Window:Restore()
@@ -2694,40 +2707,30 @@ function Window:Restore()
 	self.Animating = true
 	self.Minimized = false
 
-	local a, r = self.AdjustFrame, self.Root
-
-	-- Re-dock first, converting the screen position into Root space so it
-	-- does not move. The flight then happens inside Root's own coordinates
-	-- and lands exactly on the docked slot, with no conversion at the end
-	-- to race the tween.
-	a.Position = UDim2.new(
-		0, a.AbsolutePosition.X + a.AbsoluteSize.X / 2 - r.AbsolutePosition.X,
-		0, a.AbsolutePosition.Y - r.AbsolutePosition.Y)
-	a.Parent = r
-
-	Tween(a, DOCK, {
-		Position = UDim2.new(0.5, 0, 0, -28),
-		Size = UDim2.new(0, ADJUST_W_FULL, 0, ADJUST_H),
+	-- Straight reverse: the assembly flies home and the panel opens on the
+	-- way down, so both settle together.
+	Tween(self.Root, DOCK, {
+		Position = self.RestorePos or UDim2.new(0.5, 0, 0.5, 0),
 	})
+
+	Tween(self.AdjustFrame, SLIDE, { Size = UDim2.new(0, ADJUST_W_FULL, 0, ADJUST_H) })
 	Tween(self.CloseBtn,  SLIDE, { Position = UDim2.new(0, LIGHT_FULL.Close,  0.5, -6) })
 	Tween(self.ExpandBtn, SLIDE, { Position = UDim2.new(0, LIGHT_FULL.Expand, 0.5, -6) })
 
-	-- Overlaps the flight: yellow returns and the panel opens beneath the
-	-- pill while it is still travelling, so both finish at about 0.44s.
 	task.delay(RESTORE_LEAD, function()
-		if not a.Parent then return end
-
+		if self.Minimized then return end
 		self.MinimizeBtn.Visible = true
 		Tween(self.MinimizeBtn, RESTORE_FADE, { BackgroundTransparency = 0 })
 
 		task.delay(0.04, function()
-			if not self.Body.Parent then return end
+			if not self.Body.Parent or self.Minimized then return end
 			self.Body.Size = UDim2.new(1, 0, 0, 0)
 			self.Body.Visible = true
 			Tween(self.Body, RESTORE_EXPAND, { Size = UDim2.new(1, 0, 1, 0) })
 
 			task.delay(0.20, function()
 				if self.Body.Parent then self.Body.ClipsDescendants = false end
+				if self.SnapToPixels then self.SnapToPixels() end
 				self.Animating = false
 			end)
 		end)
@@ -3000,7 +3003,7 @@ function Saturn:CreateWindow(opts)
 
 	local parentGui = GetSafeGuiParent()
 	if not parentGui or not parentGui.Parent then
-		return nil
+		parentGui = SaturnRootGui
 	end
 
 	local gui = Create("ScreenGui", {
@@ -3589,12 +3592,12 @@ function Saturn:CreateWindow(opts)
 		local armNotif
 
 		local function destroyNow()
-			-- No group fade available now, so the shrink carries the exit.
-			Tween(scale, DESTROY_FADE, { Scale = 0.82 })
-			for _, s in ipairs(shadowParts) do
-				Tween(s, DESTROY_FADE, { ImageTransparency = 1 })
-			end
-			task.delay(0.3, function() self_:Destroy() end)
+			-- Shrink and dissolve together. Fading the whole tree is what
+			-- stops it reading as a pop: the scale alone just made things
+			-- smaller and then removed them mid-frame.
+			Tween(scale, DESTROY_OUT, { Scale = 0.9 })
+			FadeOutTree(gui, DESTROY_OUT)
+			task.delay(0.38, function() self_:Destroy() end)
 		end
 
 		-- A generation counter instead of task.cancel: the auto-disarm runs
