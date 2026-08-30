@@ -3495,6 +3495,25 @@ function Saturn:CreateWindow(opts)
 		local dragging, dragStart, startPos = false, nil, nil
 		local target, stepConn
 
+		-- Text rendered at a half-pixel offset is filtered rather than drawn
+		-- crisply. The smoothed drag lands on fractional offsets, and a
+		-- centred panel on an odd-width viewport is off by half a pixel
+		-- before anyone touches it. Nudge the offset so the panel's absolute
+		-- position sits on whole pixels; works whatever the anchor or scale.
+		local function snapToPixels()
+			local ap = root.AbsolutePosition
+			local dx = math.round(ap.X) - ap.X
+			local dy = math.round(ap.Y) - ap.Y
+			if dx ~= 0 or dy ~= 0 then
+				local p = root.Position
+				root.Position = UDim2.new(
+					p.X.Scale, p.X.Offset + dx,
+					p.Y.Scale, p.Y.Offset + dy)
+			end
+		end
+		self_.SnapToPixels = snapToPixels
+		task.defer(snapToPixels)
+
 		local function stopStepping()
 			if stepConn then
 				stepConn:Disconnect()
@@ -3545,6 +3564,8 @@ function Saturn:CreateWindow(opts)
 			-- target would keep moving it after the button came up.
 			target = root.Position
 			stopStepping()
+			snapToPixels()
+			target = root.Position
 		end))
 
 		table.insert(self_.Connections, {
@@ -3757,6 +3778,9 @@ function Saturn:CreateWindow(opts)
 		self_.Expanded = not self_.Expanded
 		self_.BaseSize = self_.Expanded and UDim2.new(0, 620, 0, 380) or baseSize
 		Tween(root, SMOOTH, { Size = self_.BaseSize })
+		task.delay(0.3, function()
+			if self_.SnapToPixels then self_.SnapToPixels() end
+		end)
 	end)
 
 	table.insert(self_.Connections, UserInputService.InputBegan:Connect(function(input, processed)
