@@ -81,10 +81,15 @@ local function GetSafeGuiParent()
 		end
 	end
 
-	if not SaturnRootGui then
-		SaturnRootGui = CreateSaturnParentGui()
+	local parent = SaturnRootGui
+	if not parent then
+		parent = CreateSaturnParentGui()
+		SaturnRootGui = parent
 	end
-	return SaturnRootGui
+	if parent and parent.Parent then
+		return parent
+	end
+	return nil
 end
 
 local function InstallSafeGuiShims(gui)
@@ -114,6 +119,9 @@ if not IsStudio then
 	InstallSafeGuiShims(SaturnRootGui)
 else
 	SaturnRootGui = LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") or nil
+end
+if SaturnRootGui and not SaturnRootGui.Parent then
+	SaturnRootGui = nil
 end
 
 local Saturn = {}
@@ -2992,7 +3000,7 @@ function Saturn:CreateWindow(opts)
 
 	local parentGui = GetSafeGuiParent()
 	if not parentGui or not parentGui.Parent then
-		parentGui = SaturnRootGui
+		return nil
 	end
 
 	local gui = Create("ScreenGui", {
