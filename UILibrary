@@ -74,26 +74,6 @@ local function InstallSafeGuiShims(gui)
 	end
 end
 
-local function GetSafeGuiParent()
-	local parentGui = nil
-	local ok, playerGui = pcall(function()
-		if LocalPlayer and LocalPlayer.Parent then
-			return LocalPlayer:FindFirstChild("PlayerGui")
-		end
-		return nil
-	end)
-	if ok and playerGui and playerGui:IsA("PlayerGui") then
-		parentGui = playerGui
-	end
-	if not parentGui then
-		parentGui = SaturnRootGui
-	end
-	if not parentGui or not parentGui.Parent then
-		parentGui = SaturnRootGui
-	end
-	return parentGui
-end
-
 DestroyStaleSaturnUI()
 local SaturnRootGui = CreateSaturnParentGui()
 InstallSafeGuiShims(SaturnRootGui)
@@ -2542,12 +2522,18 @@ function Window:_setEmpty(show, query)
 	if show then
 		self.EmptySub.Text = string.format('Nothing matches "%s"', query or "")
 		e.Visible = true
-		Tween(e, FADE, { GroupTransparency = 0 })
+		for _, p in ipairs(self.EmptyParts) do
+			Tween(p[1], FADE, { [p[2]] = p[3] })
+		end
 	elseif e.Visible then
-		Tween(e, EMPTY_OUT, { GroupTransparency = 1 })
-		task.delay(0.09, function()
+		for _, p in ipairs(self.EmptyParts) do
+			Tween(p[1], EMPTY_OUT, { [p[2]] = 1 })
+		end
+		task.delay(0.1, function()
 			-- Another search may have re-shown it in the meantime.
-			if e.GroupTransparency >= 1 then e.Visible = false end
+			if self.EmptyParts[2][1].TextTransparency >= 1 then
+				e.Visible = false
+			end
 		end)
 	end
 end
@@ -2608,7 +2594,6 @@ function Window:_tuckSearch()
 	Tween(self.SearchFrame, SMOOTH, {
 		Position = UDim2.new(0.5, 19, 0, -28),
 		Size = UDim2.new(0, 26, 0, 22),
-		GroupTransparency = 1,
 	})
 	task.delay(0.28, function()
 		if not self.SearchPeek and not self.SearchOpen then
@@ -2780,17 +2765,29 @@ function Window:Notify(opts)
 		Parent = self.NotifHolder,
 	})
 
-	local card = Create("CanvasGroup", {
+	local card = Create("Frame", {
 		Name = "Card",
 		Size = UDim2.new(1, 0, 1, 0),
 		Position = UDim2.new(0, 40, 0, 0),   -- slides in from the right
 		BackgroundColor3 = Theme.Background,
+		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		GroupTransparency = 1,
 		Parent = holder,
 	})
 	Corner(10, card)
-	Stroke(card, Theme.StrokeOuter, 1.3)
+	local cardStroke = Stroke(card, Theme.StrokeOuter, 1.3)
+	cardStroke.Transparency = 1
+
+	-- Fading the pieces by hand rather than with a CanvasGroup: the group
+	-- would resample the text and leave it soft.
+	local fadeParts = { { card, "BackgroundTransparency", 0 },
+						{ cardStroke, "Transparency", 0 } }
+
+	local function fadeTo(hidden, info)
+		for _, p in ipairs(fadeParts) do
+			Tween(p[1], info, { [p[2]] = hidden and 1 or p[3] })
+		end
+	end
 
 	local cardShadow = Shadow(card, nil, 0.41, 20)
 	local shadowBase = 0.41
@@ -2812,8 +2809,10 @@ function Window:Notify(opts)
 		Parent = card,
 	})
 	Corner(8, bar)
+	bar.BackgroundTransparency = 1
+	table.insert(fadeParts, { bar, "BackgroundTransparency", 0 })
 
-	Create("TextLabel", {
+	local notifTitle = Create("TextLabel", {
 		Name = "Title",
 		Size = UDim2.new(1, -43, 0, 16),
 		Position = UDim2.new(0, 29, 0, 12),
@@ -2823,9 +2822,11 @@ function Window:Notify(opts)
 		TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
+		TextTransparency = 1,
 		FontFace = FONT_MED,
 		Parent = card,
 	})
+	table.insert(fadeParts, { notifTitle, "TextTransparency", 0 })
 
 	local body = Create("TextLabel", {
 		Name = "Body",
@@ -2840,9 +2841,11 @@ function Window:Notify(opts)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Top,
 		FontFace = FONT_MED,
+		TextTransparency = 1,
 		Visible = (text ~= nil and text ~= ""),
 		Parent = card,
 	})
+	table.insert(fadeParts, { body, "TextTransparency", 0 })
 
 	-- Timer: anchored at its centre, so shrinking pulls both ends inward.
 	local timer = Create("Frame", {
@@ -2855,6 +2858,8 @@ function Window:Notify(opts)
 		Parent = card,
 	})
 	Corner(1, timer)
+	timer.BackgroundTransparency = 1
+	table.insert(fadeParts, { timer, "BackgroundTransparency", 0 })
 	Create("UIGradient", {
 		Transparency = NumberSequence.new({
 			NumberSequenceKeypoint.new(0,   1),
@@ -2890,10 +2895,8 @@ function Window:Notify(opts)
 			end
 		end
 
-		Tween(card, NOTIF_OUT, {
-			Position = UDim2.new(0, 40, 0, 0),
-			GroupTransparency = 1,
-		})
+		Tween(card, NOTIF_OUT, { Position = UDim2.new(0, 40, 0, 0) })
+		fadeTo(true, NOTIF_OUT)
 		if cardShadow then
 			Tween(cardShadow, NOTIF_OUT, { ImageTransparency = 1 })
 		end
@@ -2904,7 +2907,8 @@ function Window:Notify(opts)
 
 	table.insert(self.NotifStack, dismiss)
 
-	Tween(card, NOTIF_IN, { Position = UDim2.new(0, 0, 0, 0), GroupTransparency = 0 })
+	Tween(card, NOTIF_IN, { Position = UDim2.new(0, 0, 0, 0) })
+	fadeTo(false, NOTIF_IN)
 	if cardShadow then
 		Tween(cardShadow, NOTIF_IN, { ImageTransparency = shadowBase })
 	end
@@ -2948,8 +2952,8 @@ end
 function Saturn:CreateWindow(opts)
 	opts = opts or {}
 
-	local parentGui = GetSafeGuiParent()
-	if not parentGui or not parentGui.Parent then
+	local parentGui = LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui")
+	if not parentGui or not parentGui:IsA("PlayerGui") then
 		parentGui = SaturnRootGui
 	end
 
@@ -2974,13 +2978,14 @@ function Saturn:CreateWindow(opts)
 	})
 	local scale = Create("UIScale", { Parent = root })
 
-	-- CanvasGroup: one GroupTransparency fades the whole subtree for open/close.
-	local body = Create("CanvasGroup", {
+	-- Plain Frame, deliberately. A CanvasGroup rasterises its children into
+	-- an offscreen buffer and composites that, which resamples every glyph
+	-- inside it -- text across the whole panel came out soft.
+	local body = Create("Frame", {
 		Name = "Container",
 		Size = UDim2.new(1, 0, 1, 0),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		GroupTransparency = 0,
 		Active = true,
 		Parent = root,
 	})
@@ -3061,14 +3066,13 @@ function Saturn:CreateWindow(opts)
 		Parent = headerDivider,
 	})
 
-	local adjust = Create("CanvasGroup", {
+	local adjust = Create("Frame", {
 		Name = "AdjustFrame",
 		Size = UDim2.new(0, ADJUST_W_FULL, 0, ADJUST_H),
 		Position = UDim2.new(0.5, 0, 0, -28),
 		AnchorPoint = Vector2.new(0.5, 0),
 		BackgroundColor3 = Theme.Background,
 		BorderSizePixel = 0,
-		GroupTransparency = 0,
 		Parent = root,
 	})
 	Corner(10, adjust)
@@ -3097,13 +3101,12 @@ function Saturn:CreateWindow(opts)
 	-- Search widget: same shell as the traffic lights, sitting to their right.
 	-- Collapsed it is just the glass; expanded it takes the row and the
 	-- lights slide out to the far left.
-	local searchFrame = Create("CanvasGroup", {
+	local searchFrame = Create("Frame", {
 		Name = "SearchFrame",
 		Size = UDim2.new(0, 26, 0, 22),
 		Position = UDim2.new(0.5, 19, 0, -28),   -- tucked behind the lights
 		BackgroundColor3 = Theme.Background,
 		BorderSizePixel = 0,
-		GroupTransparency = 1,
 		ClipsDescendants = true,
 		Visible = false,                         -- tucked: nothing to click
 		ZIndex = 0,                              -- slides out from under them
@@ -3299,18 +3302,17 @@ function Saturn:CreateWindow(opts)
 	-- Shown when a search matches nothing. Sits over the page rect rather
 	-- than inside it: the page's UIListLayout would otherwise treat it as a
 	-- row and stack it with the elements.
-	local empty = Create("CanvasGroup", {
+	local empty = Create("Frame", {
 		Name = "EmptyState",
 		Size = UDim2.new(1, -160, 1, -18),
 		Position = UDim2.new(0, 152, 0, 9),
 		BackgroundTransparency = 1,
-		GroupTransparency = 1,
 		Visible = false,
 		ZIndex = 2,
 		Parent = body,
 	})
 
-	Create("ImageLabel", {
+	local emptyIcon = Create("ImageLabel", {
 		Name = "Icon",
 		Size = UDim2.new(0, 58, 0, 58),
 		Position = UDim2.new(0.5, 0, 0.5, -36),
@@ -3318,11 +3320,11 @@ function Saturn:CreateWindow(opts)
 		BackgroundTransparency = 1,
 		Image = opts.Icon or "rbxassetid://109016122612441",
 		ImageColor3 = Theme.TextMuted,
-		ImageTransparency = 0.6,
+		ImageTransparency = 1,
 		Parent = empty,
 	})
 
-	Create("TextLabel", {
+	local emptyHeading = Create("TextLabel", {
 		Name = "Heading",
 		Size = UDim2.new(1, -40, 0, 16),
 		Position = UDim2.new(0.5, 0, 0.5, 12),
@@ -3330,6 +3332,7 @@ function Saturn:CreateWindow(opts)
 		BackgroundTransparency = 1,
 		Text = Track("NO RESULTS"),
 		TextColor3 = Theme.TextMuted,
+		TextTransparency = 1,
 		TextSize = 12,
 		FontFace = FONT_MED,
 		Parent = empty,
@@ -3343,6 +3346,7 @@ function Saturn:CreateWindow(opts)
 		BackgroundTransparency = 1,
 		Text = "",
 		TextColor3 = Theme.TextFaint,
+		TextTransparency = 1,
 		TextSize = 12,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		FontFace = FONT_MED,
@@ -3401,6 +3405,11 @@ function Saturn:CreateWindow(opts)
 		SearchGlass = glass,
 		EmptyState = empty,
 		EmptySub = emptySub,
+		EmptyParts = {
+			{ emptyIcon, "ImageTransparency", 0.6 },
+			{ emptyHeading, "TextTransparency", 0 },
+			{ emptySub, "TextTransparency", 0 },
+		},
 		SearchOpen = false,
 		SearchPeek = false,
 		CloseBtn = closeBtn,
@@ -3513,10 +3522,8 @@ function Saturn:CreateWindow(opts)
 		local armNotif
 
 		local function destroyNow()
-			Tween(scale, DESTROY_FADE, { Scale = 0.88 })
-			Tween(body, DESTROY_FADE, { GroupTransparency = 1 })
-			Tween(adjust, DESTROY_FADE, { GroupTransparency = 1 })
-			Tween(searchFrame, DESTROY_FADE, { GroupTransparency = 1 })
+			-- No group fade available now, so the shrink carries the exit.
+			Tween(scale, DESTROY_FADE, { Scale = 0.82 })
 			for _, s in ipairs(shadowParts) do
 				Tween(s, DESTROY_FADE, { ImageTransparency = 1 })
 			end
@@ -3626,10 +3633,7 @@ function Saturn:CreateWindow(opts)
 			if self_.SearchOpen or self_.SearchPeek then return end
 			self_.SearchPeek = true
 			searchFrame.Visible = true
-			Tween(searchFrame, SMOOTH, {
-				Position = UDim2.new(0.5, 51, 0, -28),
-				GroupTransparency = 0,
-			})
+			Tween(searchFrame, SMOOTH, { Position = UDim2.new(0.5, 51, 0, -28) })
 		end
 
 		local function hideSearch()
@@ -3640,10 +3644,7 @@ function Saturn:CreateWindow(opts)
 				hideTask = nil
 				if self_.SearchOpen then return end
 				self_.SearchPeek = false
-				Tween(searchFrame, SMOOTH, {
-					Position = UDim2.new(0.5, 19, 0, -28),
-					GroupTransparency = 1,
-				})
+				Tween(searchFrame, SMOOTH, { Position = UDim2.new(0.5, 19, 0, -28) })
 				task.delay(0.28, function()
 					if not self_.SearchPeek and not self_.SearchOpen then
 						searchFrame.Visible = false
