@@ -5,8 +5,98 @@ local Players          = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService     = game:GetService("TweenService")
 local RunService       = game:GetService("RunService")
+local CoreGui          = game:GetService("CoreGui")
+local Env              = getgenv and getgenv() or _G
 
 local LocalPlayer = Players.LocalPlayer
+
+local function HasGuiFunction(func)
+	return type(func) == "function"
+end
+
+local function IsSafeGui(obj)
+	return typeof(obj) == "Instance" and obj:IsA("ScreenGui") and obj.Parent ~= nil
+end
+
+local function SafeGuiFromEnv(name)
+	local func = Env[name]
+	if not HasGuiFunction(func) then
+		return nil
+	end
+
+	local ok, result = pcall(function()
+		return func()
+	end)
+	if ok and IsSafeGui(result) then
+		return result
+	end
+
+	return nil
+end
+
+local function DestroyStaleSaturnUI()
+	local stale = CoreGui:FindFirstChild("SaturnUI")
+	if stale and stale:IsA("ScreenGui") then
+		stale:Destroy()
+	end
+end
+
+local function CreateSaturnParentGui()
+	local existing = CoreGui:FindFirstChild("SaturnUI")
+	if existing and existing:IsA("ScreenGui") then
+		return existing
+	end
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "SaturnUI"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.DisplayOrder = 1000
+	gui.Parent = CoreGui
+	return gui
+end
+
+local function InstallSafeGuiShims(gui)
+	local safeGetGui = function()
+		return gui
+	end
+
+	local existingGui = SafeGuiFromEnv("getgui") or SafeGuiFromEnv("gethui")
+	if not existingGui then
+		Env.getgui = safeGetGui
+	end
+
+	if not HasGuiFunction(Env.gethui) then
+		Env.gethui = Env.getgui
+	elseif not IsSafeGui(SafeGuiFromEnv("gethui")) then
+		Env.gethui = Env.getgui
+	end
+end
+
+local function GetSafeGuiParent()
+	local parentGui = nil
+	local ok, playerGui = pcall(function()
+		if LocalPlayer and LocalPlayer.Parent then
+			return LocalPlayer:FindFirstChild("PlayerGui")
+		end
+		return nil
+	end)
+	if ok and playerGui and playerGui:IsA("PlayerGui") then
+		parentGui = playerGui
+	end
+	if not parentGui then
+		parentGui = SaturnRootGui
+	end
+	if not parentGui or not parentGui.Parent then
+		parentGui = SaturnRootGui
+	end
+	return parentGui
+end
+
+DestroyStaleSaturnUI()
+local SaturnRootGui = CreateSaturnParentGui()
+InstallSafeGuiShims(SaturnRootGui)
 
 local Saturn = {}
 Saturn.Flags = {}
@@ -2858,12 +2948,17 @@ end
 function Saturn:CreateWindow(opts)
 	opts = opts or {}
 
+	local parentGui = GetSafeGuiParent()
+	if not parentGui or not parentGui.Parent then
+		parentGui = SaturnRootGui
+	end
+
 	local gui = Create("ScreenGui", {
 		Name = opts.Name or "Saturn",
 		ResetOnSpawn = false,
 		IgnoreGuiInset = true,
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-		Parent = LocalPlayer:WaitForChild("PlayerGui"),
+		Parent = parentGui,
 	})
 
 	local baseSize = UDim2.new(0, opts.Width or 500, 0, opts.Height or 300)
