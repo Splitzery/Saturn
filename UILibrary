@@ -834,13 +834,25 @@ function Tab:_register(flag, getter, setter)
 end
 
 -- Queues the element's callback so Window:ApplyDefaults() can push its current
--- value into the game. FireOnInit runs it immediately instead of waiting.
+-- value into the game. FireOnInit runs it immediately instead of waiting -- so
+-- the next ApplyDefaults skips it once, or the callback would land twice. A
+-- later ApplyDefaults (LoadConfig, say) fires it normally.
 function Tab:_onInit(getValue, opts)
-	local fn = function()
+	local alreadyFired = false
+	local function push()
 		if opts.Callback then task.spawn(opts.Callback, getValue()) end
 	end
-	table.insert(self.Window.InitCallbacks, fn)
-	if opts.FireOnInit then fn() end
+	table.insert(self.Window.InitCallbacks, function()
+		if alreadyFired then
+			alreadyFired = false
+			return
+		end
+		push()
+	end)
+	if opts.FireOnInit then
+		alreadyFired = true
+		push()
+	end
 end
 
 function Tab:AddToggle(opts)
