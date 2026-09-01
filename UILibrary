@@ -179,7 +179,8 @@ local TAB_H, TAB_GAP = 45, 6
 local TAB_STEP  = TAB_H + TAB_GAP        -- 51
 local TAB_REVEAL_PAD = 6                 -- breathing room when scrolling a tab in
 local SEL_BAR_H = 26
-local SEL_SLIDE  = TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local SEL_SLIDE_T = 0.30
+local SEL_SLIDE  = TweenInfo.new(SEL_SLIDE_T, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local SEL_GROW   = TweenInfo.new(0.28, Enum.EasingStyle.Back,  Enum.EasingDirection.Out)
 local SEL_SHRINK = TweenInfo.new(0.16, Enum.EasingStyle.Quad,  Enum.EasingDirection.Out)
 local GEAR_SPIN  = TweenInfo.new(0.55, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
@@ -2461,10 +2462,19 @@ function Window:_revealCanvasY(tab)
 	local top    = (tab.SidebarIndex - 1) * TAB_STEP
 	local bottom = top + TAB_H
 
+	-- Clamped to what the frame can actually scroll to. Tweening past the end
+	-- means the engine clamps every frame while the tween keeps pushing, and
+	-- the two argue for the whole animation.
+	local maxY = math.max(sc.AbsoluteCanvasSize.Y - sc.AbsoluteWindowSize.Y, 0)
+
+	local function clamp(v)
+		return math.clamp(v, 0, maxY)
+	end
+
 	if top - TAB_REVEAL_PAD < pos then
-		return math.max(top - TAB_REVEAL_PAD, 0)
+		return clamp(top - TAB_REVEAL_PAD)
 	elseif bottom + TAB_REVEAL_PAD > pos + view then
-		return math.max(bottom + TAB_REVEAL_PAD - view, 0)
+		return clamp(bottom + TAB_REVEAL_PAD - view)
 	end
 
 	return pos
@@ -2512,7 +2522,18 @@ function Window:_selectTab(tab)
 		local canvasY = self:_revealCanvasY(tab)
 
 		if math.abs(canvasY - sc.CanvasPosition.Y) > 0.5 then
+			-- The CanvasPosition handler keeps the highlight glued to the list
+			-- while the user scrolls. During this tween it must stand down: it
+			-- writes the same property the highlight's own tween is animating,
+			-- and until the end of this function ActiveTab is still the tab we
+			-- are leaving -- so it would drag the box back to the old row on
+			-- every frame. That is the jitter.
+			self._revealing = true
 			Tween(sc, SEL_SLIDE, { CanvasPosition = Vector2.new(0, canvasY) })
+
+			task.delay(SEL_SLIDE_T, function()
+				self._revealing = false
+			end)
 		end
 
 		local y = (tab.SidebarIndex - 1) * TAB_STEP - canvasY
@@ -3737,6 +3758,10 @@ function Saturn:CreateWindow(opts)
 	-- Keep the highlight glued to the list if the sidebar ever scrolls.
 	table.insert(self_.Connections,
 		sideBarContainer:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+			-- Suppressed while _selectTab is driving the scroll itself; the
+			-- highlight is already tweening to the right place.
+			if self_._revealing then return end
+
 			local t = self_.ActiveTab
 			if t and not t.Pinned then
 				selectionBox.Position = UDim2.new(0, 0, 0,
