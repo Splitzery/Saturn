@@ -675,6 +675,37 @@ local function InBounds(obj, pos)
 	and pos.Y >= p.Y and pos.Y <= p.Y + s.Y
 end
 
+-- ClipsDescendants has no effect on a rotated GuiObject -- it escapes its
+-- container and draws over the rest of the screen. Anything rotated inside a
+-- scrolling page has to be culled by hand, or it floats free once the row it
+-- belongs to is scrolled past the edge.
+local function ClipCull(element, viewport, conns)
+	local function update()
+		local a, b = element.AbsolutePosition, element.AbsoluteSize
+		local p, q = viewport.AbsolutePosition, viewport.AbsoluteSize
+
+		-- Fully inside, not merely overlapping. A partly clipped rotation
+		-- would still bleed past the edge, which is the whole problem.
+		element.Visible = a.Y >= p.Y and (a.Y + b.Y) <= (p.Y + q.Y)
+	end
+
+	local subs = {
+		element:GetPropertyChangedSignal("AbsolutePosition"):Connect(update),
+		viewport:GetPropertyChangedSignal("AbsolutePosition"):Connect(update),
+		viewport:GetPropertyChangedSignal("AbsoluteSize"):Connect(update),
+	}
+
+	if conns then
+		for _, c in ipairs(subs) do
+			table.insert(conns, c)
+		end
+	end
+
+	-- Deferred: AbsolutePosition is still zero on the frame it is created.
+	task.defer(update)
+	return update
+end
+
 local function markerPos(alpha, bar)
 	local w = bar.AbsoluteSize.X
 	if w < 8 then
@@ -1810,6 +1841,9 @@ local function buildDropdown(self, opts, multi)
 		})
 		Corner(1, bar)
 	end
+
+	-- The bars are rotated, so the page cannot clip them.
+	ClipCull(chevron, self.Page, conns)
 
 	-- ---------- option list ----------
 
