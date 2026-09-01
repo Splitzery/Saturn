@@ -5,6 +5,7 @@ local Players          = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService     = game:GetService("TweenService")
 local RunService       = game:GetService("RunService")
+local HttpService      = game:GetService("HttpService")
 local Env              = getgenv and getgenv() or _G
 
 local LocalPlayer = Players.LocalPlayer
@@ -176,6 +177,7 @@ local RIPPLE_FADE = TweenInfo.new(0.42, Enum.EasingStyle.Quad,  Enum.EasingDirec
 -- Tab selection
 local TAB_H, TAB_GAP = 45, 6
 local TAB_STEP  = TAB_H + TAB_GAP        -- 51
+local TAB_REVEAL_PAD = 6                 -- breathing room when scrolling a tab in
 local SEL_BAR_H = 26
 local SEL_SLIDE  = TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local SEL_GROW   = TweenInfo.new(0.28, Enum.EasingStyle.Back,  Enum.EasingDirection.Out)
@@ -572,10 +574,33 @@ local function ApplyDisabled(frame, state)
 	if d then d.Visible = not on end
 end
 
+-- Executor file access, if there is any. Studio has none, so every one of
+-- these is nil there and the config system quietly does nothing rather than
+-- erroring on load.
+local FS = {}
+do
+	local names = { "writefile", "readfile", "isfile", "isfolder", "makefolder", "delfile" }
+	for _, name in ipairs(names) do
+		local fn = rawget(getfenv(), name)
+		if typeof(fn) == "function" then
+			FS[name] = fn
+		end
+	end
+end
+
+local function fsReady()
+	return FS.writefile ~= nil and FS.readfile ~= nil and FS.isfile ~= nil
+end
+
 -- Config values have to survive JSONEncode, so wrap the types that can't.
 local function EncodeValue(v)
 	local t = typeof(v)
-	if t == "Color3" then
+	-- JSON has no way to hold a nil in a map, so an unbound keybind or an
+	-- empty dropdown would simply vanish from the file and could never be
+	-- restored. Wrapped, it round-trips.
+	if v == nil then
+		return { __type = "None" }
+	elseif t == "Color3" then
 		return { __type = "Color3",
 			R = math.round(v.R * 255), G = math.round(v.G * 255), B = math.round(v.B * 255) }
 	elseif t == "EnumItem" then
@@ -585,7 +610,9 @@ local function EncodeValue(v)
 end
 
 local function DecodeValue(v)
-	if type(v) == "table" and v.__type == "Color3" then
+	if type(v) == "table" and v.__type == "None" then
+		return nil
+	elseif type(v) == "table" and v.__type == "Color3" then
 		return Color3.fromRGB(v.R or 0, v.G or 0, v.B or 0)
 	elseif type(v) == "table" and v.__type == "EnumItem" then
 		local ok, item = pcall(function() return Enum.KeyCode[v.Name] end)
@@ -857,6 +884,7 @@ end
 
 function Tab:_register(flag, getter, setter)
 	if not flag then return end
+	table.insert(self.Flags, flag)      -- so Tab:Destroy can unregister it
 	self.Window.Flags[flag] = getter      -- authoritative, per window
 	Saturn.Flags[flag] = getter           -- convenience mirror
 	if setter then
@@ -873,13 +901,16 @@ function Tab:_onInit(getValue, opts)
 	local function push()
 		if opts.Callback then task.spawn(opts.Callback, getValue()) end
 	end
-	table.insert(self.Window.InitCallbacks, function()
+	local queued = function()
 		if alreadyFired then
 			alreadyFired = false
 			return
 		end
 		push()
-	end)
+	end
+
+	table.insert(self.Window.InitCallbacks, queued)
+	table.insert(self.InitCallbacks, queued)    -- so Tab:Destroy can unqueue it
 	if opts.FireOnInit then
 		alreadyFired = true
 		push()
@@ -2353,6 +2384,28 @@ end
 function Tab:Destroy()
 	local w = self.Window
 
+	-- Unregister first. Left in place, a destroyed tab still reports values
+	-- into GetConfig, still fires its callbacks from ApplyDefaults, and
+	-- LoadConfig writes into instances that no longer exist.
+	for _, flag in ipairs(self.Flags) do
+		if Saturn.Flags[flag] == w.Flags[flag] then
+			Saturn.Flags[flag] = nil
+		end
+		w.Flags[flag] = nil
+		w.Setters[flag] = nil
+	end
+	table.clear(self.Flags)
+
+	for _, fn in ipairs(self.InitCallbacks) do
+		for i, queued in ipairs(w.InitCallbacks) do
+			if queued == fn then
+				table.remove(w.InitCallbacks, i)
+				break
+			end
+		end
+	end
+	table.clear(self.InitCallbacks)
+
 	for i, t in ipairs(w.Tabs) do
 		if t == self then
 			table.remove(w.Tabs, i)
@@ -2392,6 +2445,31 @@ end
 local Window = {}
 Window.__index = Window
 
+-- The canvas position that brings a sidebar tab fully into view, or the
+-- current one if it is already there. Returned rather than applied, because
+-- the selection highlight is positioned relative to the canvas -- computing
+-- its target against the old scroll would land it in the wrong place.
+function Window:_revealCanvasY(tab)
+	local sc = self.SideBarContainer
+	local pos = sc.CanvasPosition.Y
+
+	if tab.Pinned then return pos end
+
+	local view = sc.AbsoluteSize.Y
+	if view <= 0 then return pos end
+
+	local top    = (tab.SidebarIndex - 1) * TAB_STEP
+	local bottom = top + TAB_H
+
+	if top - TAB_REVEAL_PAD < pos then
+		return math.max(top - TAB_REVEAL_PAD, 0)
+	elseif bottom + TAB_REVEAL_PAD > pos + view then
+		return math.max(bottom + TAB_REVEAL_PAD - view, 0)
+	end
+
+	return pos
+end
+
 function Window:_selectTab(tab)
 	if self.ActiveTab == tab then return end
 
@@ -2427,7 +2505,17 @@ function Window:_selectTab(tab)
 		Tween(box, FADE, { BackgroundTransparency = 1 })
 		Tween(bar, SEL_SHRINK, { Size = UDim2.new(0, 4, 0, 0) })
 	else
-		local y = (tab.SidebarIndex - 1) * TAB_STEP - self.SideBarContainer.CanvasPosition.Y
+		-- Scroll the tab into view if it is clipped, and measure the highlight
+		-- against where the scroll is going rather than where it is. Same
+		-- tween length for both, so they arrive together.
+		local sc = self.SideBarContainer
+		local canvasY = self:_revealCanvasY(tab)
+
+		if math.abs(canvasY - sc.CanvasPosition.Y) > 0.5 then
+			Tween(sc, SEL_SLIDE, { CanvasPosition = Vector2.new(0, canvasY) })
+		end
+
+		local y = (tab.SidebarIndex - 1) * TAB_STEP - canvasY
 		local target = UDim2.new(0, 0, 0, y)
 
 		if first or wasPinned then
@@ -2555,6 +2643,11 @@ function Window:CreateTab(opts)
 		Spin = opts.Spin,
 		SpinAngle = 0,
 		SidebarIndex = (not pinned) and self.SidebarCount or nil,
+
+		-- What this tab has registered on the window, so Destroy can take it
+		-- all back rather than leaving a destroyed tab answering GetConfig.
+		Flags = {},
+		InitCallbacks = {},
 	}, Tab)
 
 	ClickLayer(button, 8).MouseButton1Click:Connect(function()
@@ -2819,6 +2912,110 @@ end
 
 function Window:Error(title, text, duration)
 	return self:Notify({ Title = title, Text = text, Duration = duration, Type = "error" })
+end
+
+-- ============================================================
+--  Config files
+--
+--  Same shape as every other library: a folder of named .json configs, an
+--  autoload on start and a save whenever something changes. Everything is
+--  pcall'd and gated on fsReady, so a Studio run -- where none of these
+--  functions exist -- behaves exactly as it did before.
+-- ============================================================
+
+function Window:_configPath(name)
+	return self.Folder .. "/" .. (name or self.ConfigName) .. ".json"
+end
+
+function Window:ListConfigs()
+	local out = {}
+	if not (FS.isfolder and FS.isfolder(self.Folder) and listfiles) then
+		return out
+	end
+
+	local ok, files = pcall(listfiles, self.Folder)
+	if not ok then return out end
+
+	for _, path in ipairs(files) do
+		local name = tostring(path):match("([^/\\]+)%.json$")
+		if name then table.insert(out, name) end
+	end
+
+	return out
+end
+
+function Window:SaveConfigFile(name)
+	if not fsReady() then return false, "No file access" end
+
+	if FS.makefolder and FS.isfolder and not FS.isfolder(self.Folder) then
+		pcall(FS.makefolder, self.Folder)
+	end
+
+	local ok, encoded = pcall(function()
+		return HttpService:JSONEncode(self:GetConfig())
+	end)
+	if not ok then return false, tostring(encoded) end
+
+	local wrote, err = pcall(FS.writefile, self:_configPath(name), encoded)
+	if not wrote then return false, tostring(err) end
+
+	self._lastSaved = encoded
+	return true
+end
+
+function Window:LoadConfigFile(name)
+	if not fsReady() then return false, "No file access" end
+
+	local path = self:_configPath(name)
+	if not FS.isfile(path) then return false, "No saved config" end
+
+	local ok, raw = pcall(FS.readfile, path)
+	if not ok then return false, tostring(raw) end
+
+	local decoded
+	ok, decoded = pcall(function()
+		return HttpService:JSONDecode(raw)
+	end)
+	if not ok or type(decoded) ~= "table" then
+		return false, "Config file is not valid JSON"
+	end
+
+	self:LoadConfig(decoded)
+
+	-- Recorded from what we now hold, not from the file: the file may predate
+	-- flags that no longer exist, and the autosave compares against this.
+	local encoded
+	ok, encoded = pcall(function()
+		return HttpService:JSONEncode(self:GetConfig())
+	end)
+	if ok then self._lastSaved = encoded end
+
+	return true
+end
+
+-- Polls rather than hooking every control, because a change can come from a
+-- callback, a keybind, a LoadConfig or the game itself. Encoding a table this
+-- small a few times a minute is not worth wiring a signal into every element.
+function Window:_startAutoSave()
+	table.insert(self.Connections, {
+		Disconnect = function() self.AutoSave = false end,
+	})
+
+	task.spawn(function()
+		while self.AutoSave and self.Gui and self.Gui.Parent do
+			task.wait(self.AutoSaveInterval)
+
+			if self.AutoSave and fsReady() then
+				local ok, encoded = pcall(function()
+					return HttpService:JSONEncode(self:GetConfig())
+				end)
+
+				if ok and encoded ~= self._lastSaved then
+					self:SaveConfigFile()
+				end
+			end
+		end
+	end)
 end
 
 function Window:ApplyDefaults()
@@ -3516,6 +3713,15 @@ function Saturn:CreateWindow(opts)
 		InitCallbacks = {},
 		Flags = {},
 		Setters = {},
+
+		-- Config files. Folder is the executor's workspace directory, the same
+		-- convention every other library uses.
+		Folder = opts.Folder or "Saturn",
+		ConfigName = opts.ConfigName or "default",
+		AutoSave = opts.AutoSave ~= false,
+		AutoSaveInterval = opts.AutoSaveInterval or 4,
+		AutoLoad = opts.AutoLoad ~= false,
+		_lastSaved = nil,
 		ConnGroups = {},
 		NotifStack = {},
 		BaseSize = baseSize,
@@ -3860,10 +4066,13 @@ function Saturn:CreateWindow(opts)
 
 	settings:AddSection("Interface")
 
+	-- Flagged like everything else, so the interface's own settings are part
+	-- of a saved config rather than the one thing that never persists.
 	settings:AddKeybind({
 		Name = "TOGGLE UI",
 		Description = "Rebind the menu key.",
 		Default = self_.ToggleKey,
+		Flag = "saturn_toggle_key",
 		OnBind = function(k) self_.ToggleKey = k end,
 	})
 
@@ -3871,6 +4080,7 @@ function Saturn:CreateWindow(opts)
 		Name = "ACCENT COLOR",
 		Description = "Recolors the interface.",
 		Default = Theme.Accent,
+		Flag = "saturn_accent",
 		Callback = function(c) self_:SetAccent(c) end,
 	})
 
@@ -3881,47 +4091,54 @@ function Saturn:CreateWindow(opts)
 	-- buttons keep one snapshot in memory so they still do something.
 	settings:AddButton({
 		Name = "SAVE CONFIG",
-		Description = "Stores the current control values.",
+		Description = "Writes the current values to " .. self_.Folder .. ".",
 		Callback = function()
-			local cfg = self_:GetConfig()
+			-- A SaveConfig callback still wins, for games that want their own
+			-- backend. Otherwise it goes to the executor's file system.
 			if opts.SaveConfig then
-				local ok, err = pcall(opts.SaveConfig, cfg)
+				local ok, err = pcall(opts.SaveConfig, self_:GetConfig())
 				if ok then
 					self_:Success("Saved", "Configuration stored.")
 				else
 					self_:Error("Save failed", tostring(err))
 				end
+				return
+			end
+
+			local ok, err = self_:SaveConfigFile()
+			if ok then
+				self_:Success("Saved", self_:_configPath())
 			else
-				self_._memoryConfig = cfg
-				self_:Success("Saved", "Stored in memory for this session.")
+				self_:Error("Save failed", tostring(err))
 			end
 		end,
 	})
 
 	settings:AddButton({
 		Name = "LOAD CONFIG",
-		Description = "Restores the stored values.",
+		Description = "Restores the values from the saved file.",
 		Callback = function()
-			local cfg
 			if opts.LoadConfig then
 				local ok, res = pcall(opts.LoadConfig)
-				if ok then
-					cfg = res
-				else
+				if not ok then
 					self_:Error("Load failed", tostring(res))
 					return
 				end
-			else
-				cfg = self_._memoryConfig
-			end
-
-			if not cfg then
-				self_:Warn("Nothing stored", "Save a configuration first.")
+				if not res then
+					self_:Warn("Nothing stored", "Save a configuration first.")
+					return
+				end
+				self_:LoadConfig(res)
+				self_:Success("Loaded", "Configuration restored.")
 				return
 			end
 
-			self_:LoadConfig(cfg)
-			self_:Success("Loaded", "Configuration restored.")
+			local ok, err = self_:LoadConfigFile()
+			if ok then
+				self_:Success("Loaded", "Configuration restored.")
+			else
+				self_:Warn("Nothing loaded", tostring(err))
+			end
 		end,
 	})
 
@@ -4046,6 +4263,24 @@ function Saturn:CreateWindow(opts)
 
 			task.wait(0.3)
 			intro:Destroy()
+		end)
+	end
+
+	-- Deferred, because the caller builds its tabs after this function
+	-- returns -- there is nothing to restore into yet. One resumption later
+	-- there is, and it lands after the script's own ApplyDefaults, so a saved
+	-- config wins over the defaults written in code.
+	if fsReady() and (self_.AutoLoad or self_.AutoSave) then
+		task.defer(function()
+			if not self_.Gui or not self_.Gui.Parent then return end
+
+			if self_.AutoLoad then
+				self_:LoadConfigFile()
+			end
+
+			if self_.AutoSave then
+				self_:_startAutoSave()
+			end
 		end)
 	end
 
