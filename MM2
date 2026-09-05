@@ -1,0 +1,112 @@
+local l_=game:GetService("\80\108\97\121\101\114\115")local __=game:GetService("\82\117\110\83\101\114\118\105\99\101")local III=game:GetService("\85\115\101\114\73\110\112\117\116\83\101\114\118\105\99\101"
+)local O0 if __:IsStudio()then O0=require(game:GetService("\82\101\112\108\105\99\97\116\101\100\83\116\111\114\97\103\101"):WaitForChild("\83\97\116\117\114\110"))else O0=loadstring(
+game:HttpGet("\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\83\112\108\105\116\122\101\114\121\47\83\97\116\117\114\110\47\109\97\105\110\47\85\73\76\105\98\114\97\114\121"
+))()end local lII=O0:CreateWindow({Title="\83\65\84\85\82\78",ToggleKey=Enum.KeyCode.RightControl,})local _l=lII:CreateTab({Name="\70\97\114\109",Icon="\114\98\120\97\115\115\101\116\105\100\58\47\47\57\57\54\54\48\55\50\50\52\54\55\56\49\55"
+,})local _I=lII:CreateTab({Name="\69\83\80",Icon="\114\98\120\97\115\115\101\116\105\100\58\47\47\49\50\48\48\51\52\55\56\55\48\56\53\53\54\48",})local I_=lII:CreateTab({Name="\80\108\97\121\101\114"
+,Icon="\114\98\120\97\115\115\101\116\105\100\58\47\47\55\57\56\50\56\50\57\54\48\52\52\55\50\54",})local _0=lII:CreateTab({Name="\84\101\108\101\112\111\114\116",Icon="\114\98\120\97\115\115\101\116\105\100\58\47\47\49\48\50\53\51\48\51\48\49\55\54\52\56\56\56"
+,})local _O=l_.LocalPlayer local Ol=22 local I="\65\108\105\118\101"local ll=3 local Il=20 local l0=1.5 local _=0.35 local l=2 local II=3 local lO=6 local lOI=false local OOI=false
+local __II=false local Il0=nil local I_O=false local l0II={}local O0II=nil local O0lI={}local IOl=false local _0_=nil local l_I=false local O00={}local OlI local function llII(OlII
+)return OlII:GetAttribute(I)==true end local function I__()return llII(_O)end local O_=8 local lI0=0 local l0_={}local function lIOI()local IIII=_O:FindFirstChildOfClass("\66\97\99\107\112\97\99\107"
+)if IIII and(IIII:FindFirstChild("\75\110\105\102\101")or IIII:FindFirstChild("\71\117\110"))then return true end for OII,OlII in ipairs(l_:GetPlayers())do local _0I=OlII.Character
+if _0I and(_0I:FindFirstChild("\75\110\105\102\101")or _0I:FindFirstChild("\71\117\110"))then return true end end return false end local function Ol_()if next(l0_)==nil then return
+false end for OlII in pairs(l0_)do if OlII.Character then return false end end return true end local function O_II()if lIOI()then lI0=os.clock()return true end if Ol_()then return false
+end return(os.clock()-lI0)<O_ end local function I0O()local _0I=_O.Character return _0I and _0I:FindFirstChild("\72\117\109\97\110\111\105\100\82\111\111\116\80\97\114\116")end local
+O={"\77\97\105\110\71\85\73","\71\97\109\101","\67\111\105\110\66\97\103\115","\67\111\110\116\97\105\110\101\114","\67\111\105\110","\70\117\108\108"}local function I_I()local __0
+=_O:FindFirstChildOfClass("\80\108\97\121\101\114\71\117\105")for OII,OO0 in ipairs(O)do if not __0 then return false end __0=__0:FindFirstChild(OO0)end return __0~=nil and __0:IsA(
+"\71\117\105\79\98\106\101\99\116")and __0.Visible==true end local function l__(_O_)return _O_:IsA("\66\97\115\101\80\97\114\116")and _O_.Name=="\67\111\105\110\95\83\101\114\118\101\114"
+and _O_:FindFirstChild("\84\111\117\99\104\73\110\116\101\114\101\115\116")~=nil and _O_:FindFirstChild("\67\111\105\110\86\105\115\117\97\108")~=nil end local function O__(_O_)return
+_O_:IsA("\66\97\115\101\80\97\114\116")and _O_.Name=="\71\117\110\68\114\111\112"end local I0=1500 local lll={}local l0O={}local IO_=nil local function lO_(_O_)if l__(_O_)then lll[
+_O_]=true return end if O__(_O_)then l0O[_O_]=true return end local lIII=_O_.Parent if lIII and l__(lIII)then lll[lIII]=true end end local function lllI()if IO_ then return end IO_
+=workspace.DescendantAdded:Connect(lO_)table.clear(lll)table.clear(l0O)local _II=workspace:GetDescendants()for ll_=1,#_II do if ll_%I0==0 then __.Heartbeat:Wait()end lO_(_II[ll_])end
+end task.spawn(lllI)local function I_0(_00)local _O0 local __I=math.huge for OIII in pairs(lll)do if not OIII.Parent then lll[OIII]=nil elseif OIII:GetAttribute("\67\111\108\108\101\99\116\101\100"
+)~=true and not O0lI[OIII]then local _Ol=(_00-OIII.Position).Magnitude if _Ol<__I then __I=_Ol _O0=OIII end end end return _O0 end local function l_0(_00)local _O0 local __I=math.huge
+for OIII in pairs(l0O)do if not OIII.Parent then l0O[OIII]=nil else local _Ol=(_00-OIII.Position).Magnitude if _Ol<__I then __I=_Ol _O0=OIII end end end return _O0 end local function
+O_0(_0I)task.spawn(function()while __II and I_O and _0I.Parent and I__()do for OII,l0lI in ipairs(_0I:GetDescendants())do if l0lI:IsA("\66\97\115\101\80\97\114\116")then if l0II[l0lI
+]==nil then l0II[l0lI]=l0lI.CanCollide end l0lI.CanCollide=false end end __.Stepped:Wait()end end)end local function l0l(_0I)if I_O then return end local Il_=_0I:FindFirstChildOfClass(
+"\72\117\109\97\110\111\105\100")if not Il_ then return end O0II={humanoid=Il_,WalkSpeed=Il_.WalkSpeed,JumpPower=Il_.JumpPower,JumpHeight=Il_.JumpHeight,AutoRotate=Il_.AutoRotate,}
+I_O=true Il_.PlatformStand=true O_0(_0I)end local function O_l()if not I_O then return end I_O=false local I_II=I0O()if I_II then I_II.AssemblyLinearVelocity=Vector3.zero end for OIII
+,lOl in pairs(l0II)do if OIII.Parent then if OIII.Name=="\72\117\109\97\110\111\105\100\82\111\111\116\80\97\114\116"then OIII.CanCollide=false else OIII.CanCollide=lOl end end end
+table.clear(l0II)local I0II=O0II O0II=nil if I0II and I0II.humanoid.Parent then local _0O=I0II.humanoid _0O.PlatformStand=false _0O.WalkSpeed=I0II.WalkSpeed _0O.JumpPower=I0II.JumpPower
+_0O.JumpHeight=I0II.JumpHeight _0O.AutoRotate=I0II.AutoRotate end if OlI then OlI()end end local function _OO(OIII)local _0I=_O.Character local I_II=_0I and _0I:FindFirstChild("\72\117\109\97\110\111\105\100\82\111\111\116\80\97\114\116"
+)if not I_II then return end local IllI=(OIII.Position-I_II.Position).Magnitude local I_l=tick()+math.clamp(IllI/Ol*2+2,ll,Il)local IOI=false local OOO=false local I0I=math.huge local
+II0=tick()while __II and I_O and _0I.Parent and OIII.Parent and I__()do if tick()>I_l then OOO=true break end if OIII:GetAttribute("\67\111\108\108\101\99\116\101\100")==true then OOO
+=true break end local I_lI=OIII.Position-Vector3.new(0,II,0)local l_l=I_lI-I_II.Position local __l=l_l.Magnitude if __l<l then IOI=true OOO=true break end if __l<I0I-0.5 then I0I=__l
+II0=tick()elseif tick()-II0>l0 then OOO=true break end I_II.AssemblyLinearVelocity=l_l.Unit*Ol I_II.AssemblyAngularVelocity=Vector3.zero if(OIII.Position-I_II.Position).Magnitude>0.05
+then I_II.CFrame=CFrame.new(I_II.Position,OIII.Position)*CFrame.Angles(math.rad(90),0,0)end __.RenderStepped:Wait()end if IOI and I_II.Parent and OIII.Parent then I_II.CFrame=CFrame
+.new(OIII.Position)end I_II.AssemblyLinearVelocity=Vector3.zero I_II.AssemblyAngularVelocity=Vector3.zero local _ll=false if IOI then local OI_=I_II.CFrame local I0lI=tick()+_ while
+tick()<I0lI and __II and I_O and _0I.Parent do I_II.CFrame=OI_ I_II.AssemblyLinearVelocity=Vector3.zero __.RenderStepped:Wait()end _ll=(not OIII.Parent)or OIII:GetAttribute("\67\111\108\108\101\99\116\101\100"
+)==true end return IOI,_ll,OOO end local function lOII()local _0I=_O.Character if not _0I then return end _0I:BreakJoints()local I_l=os.clock()+15 repeat task.wait(0.2)until _O.Character
+~=_0I or os.clock()>I_l end local function _III(_00,Oll)if lOI and Oll then local Ill=I_0(_00)if Ill then return Ill,"\99\111\105\110"end end return nil,nil end local function _I0(
+)local _l_=0 while __II do local O_O=false local I00,_0l=pcall(function()if not I__()then O_l()return end local _0I=_O.Character local I_II=_0I and _0I:FindFirstChild("\72\117\109\97\110\111\105\100\82\111\111\116\80\97\114\116"
+)if not I_II then O_l()return end local __O=I_I()if __O~=l_I then l_I=__O if __O and not OOI then lII:Warn("\66\97\103\32\102\117\108\108","\80\97\117\115\101\100\32\117\110\116\105\108\32\116\104\101\114\101\32\105\115\32\114\111\111\109\32\97\103\97\105\110\46"
+)end end local I_lI,I0_=_III(I_II.Position,not __O)if not I_lI then if I_O then local O_I=_0_ or I_II.Position I_II.CFrame=CFrame.new(O_I+Vector3.new(0,lO,0))end O_l()if lOI and OOI
+and IOl then lOII()end return end O_O=true l0l(_0I)local IOI,_ll,OOO=_OO(I_lI)if I0_=="\99\111\105\110"then if OOO then O0lI[I_lI]=true end if IOI then _0_=I_lI.Position if _ll then
+IOl=true end end end end)if not I00 then warn("\91\67\111\105\110\70\97\114\109\93\32"..tostring(_0l))end if not I00 then _l_=0 task.wait(0.5)elseif O_O then _l_=0 __.Heartbeat:Wait(
+)else _l_=math.min(_l_+1,10)task.wait(0.1+_l_*0.1)end end end local function OllI()if __II then return end __II=true O0lI={}IOl=false _0_=nil l_I=false Il0=task.spawn(_I0)end local
+function IOlI()if not __II then return end __II=false if Il0 then task.cancel(Il0)Il0=nil end O_l()end local function OOlI()if lOI then OllI()else IOlI()end end _O.CharacterAdded:Connect(
+function(_0I)I_O=false O0II=nil table.clear(l0II)O0lI={}IOl=false _0_=nil l_I=false for OII,l_O in ipairs(O00)do task.spawn(l_O)end end)local OI=0.5 local IO="\71\117\110\32\68\114\111\112"
+local lI={Murderer=Color3.fromRGB(255,55,55),Sheriff=Color3.fromRGB(60,140,255),Innocent=Color3.fromRGB(200,202,210),[IO]=Color3.fromRGB(255,214,64),}local lIO=false local llO={Murderer
+=false,Sheriff=false,Innocent=false,[IO]=false,}local lOO=0 local O0O={}local _lO=false local OIO=false local IOO={}local function _OII(OlII)local _0I=OlII.Character if not _0I or not
+llII(OlII)then l0_[OlII]=nil return nil end local IIII=OlII:FindFirstChildOfClass("\66\97\99\107\112\97\99\107")local function _I_(__lI)return _0I:FindFirstChild(__lI)~=nil or(IIII
+and IIII:FindFirstChild(__lI)~=nil)end if _I_("\75\110\105\102\101")then l0_[OlII]="\77\117\114\100\101\114\101\114"return"\77\117\114\100\101\114\101\114"end if _I_("\71\117\110")
+then l0_[OlII]="\83\104\101\114\105\102\102"return"\83\104\101\114\105\102\102"end local IOII=l0_[OlII]if IOII then return IOII end return"\73\110\110\111\99\101\110\116"end local function
+_Il(OlII)local _OlI=IOO[OlII]if not _OlI then return end if _OlI.highlight then _OlI.highlight:Destroy()end if _OlI.billboard then _OlI.billboard:Destroy()end IOO[OlII]=nil end local
+function lIl()for OlII in pairs(IOO)do _Il(OlII)end end local function _lI(OlII,OOII)local _0I=OlII.Character local II_=_0I and _0I:FindFirstChild("\72\101\97\100")if not II_ then _Il(
+OlII)return end local _OlI=IOO[OlII]if _OlI and _OlI.char~=_0I then _Il(OlII)_OlI=nil end if not _OlI then local lI_=Instance.new("\72\105\103\104\108\105\103\104\116")lI_.Name="\83\97\116\117\114\110\82\111\108\101\69\83\80"
+lI_.Adornee=_0I lI_.FillTransparency=0.6 lI_.OutlineTransparency=0 lI_.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop lI_.Parent=_0I local l0I=Instance.new("\66\105\108\108\98\111\97\114\100\71\117\105"
+)l0I.Name="\83\97\116\117\114\110\82\111\108\101\84\97\103"l0I.Adornee=II_ l0I.Size=UDim2.new(0,140,0,26)l0I.StudsOffset=Vector3.new(0,2.6,0)l0I.AlwaysOnTop=true l0I.Parent=II_ local
+O0_=Instance.new("\84\101\120\116\76\97\98\101\108")O0_.Size=UDim2.new(1,0,1,0)O0_.BackgroundTransparency=1 O0_.Font=Enum.Font.GothamBold O0_.TextSize=14 O0_.TextStrokeTransparency
+=0.4 O0_.TextStrokeColor3=Color3.new(0,0,0)O0_.Parent=l0I _OlI={char=_0I,highlight=lI_,billboard=l0I,label=O0_,}IOO[OlII]=_OlI end local OOl=lI[OOII]_OlI.highlight.FillColor=OOl _OlI
+.highlight.OutlineColor=OOl _OlI.label.Text=OOII _OlI.label.TextColor3=OOl end local function IIO()if not lIO then return false end for OII,l00 in pairs(llO)do if l00 then return true
+end end return false end local function OIl(OIII)local _OlI=O0O[OIII]if not _OlI then return end if _OlI.highlight then _OlI.highlight:Destroy()end if _OlI.billboard then _OlI.billboard
+:Destroy()end O0O[OIII]=nil end local function IIl()for OIII in pairs(O0O)do OIl(OIII)end end local function llI(OIII)if O0O[OIII]then return end local OOl=lI[IO]local lI_=Instance
+.new("\72\105\103\104\108\105\103\104\116")lI_.Name="\83\97\116\117\114\110\71\117\110\69\83\80"lI_.Adornee=OIII lI_.FillTransparency=0.6 lI_.OutlineTransparency=0 lI_.DepthMode=Enum
+.HighlightDepthMode.AlwaysOnTop lI_.Parent=OIII local l0I=Instance.new("\66\105\108\108\98\111\97\114\100\71\117\105")l0I.Name="\83\97\116\117\114\110\71\117\110\84\97\103"l0I.Adornee
+=OIII l0I.Size=UDim2.new(0,140,0,26)l0I.StudsOffset=Vector3.new(0,2,0)l0I.AlwaysOnTop=true l0I.Parent=OIII local O0_=Instance.new("\84\101\120\116\76\97\98\101\108")O0_.Size=UDim2.
+new(1,0,1,0)O0_.BackgroundTransparency=1 O0_.Font=Enum.Font.GothamBold O0_.TextSize=14 O0_.TextStrokeTransparency=0.4 O0_.TextStrokeColor3=Color3.new(0,0,0)O0_.Text="\83\104\101\114\105\102\102\32\71\117\110"
+O0_.TextColor3=OOl O0_.Parent=l0I O0O[OIII]={highlight=lI_,billboard=l0I}end local function IlO()if not O_II()then lIl()IIl()_lO=false table.clear(l0_)return end do if llO[IO]then local
+I0l=l_0(Vector3.zero)for OIII in pairs(O0O)do if OIII~=I0l or not OIII.Parent then OIl(OIII)end end if I0l and I0l:IsA("\66\97\115\101\80\97\114\116")then llI(I0l)end else IIl()end
+local l_II=I__()if l_II~=OIO then OIO=l_II _lO=false table.clear(l0_)end local lIlI={}local _0II,IIlI=false,false local lO0=_OII(_O)if lO0=="\77\117\114\100\101\114\101\114"then _0II
+=true end if lO0=="\83\104\101\114\105\102\102"then IIlI=true end for OII,OlII in ipairs(l_:GetPlayers())do if OlII~=_O then local OOII=_OII(OlII)table.insert(lIlI,{plr=OlII,role=OOII
+})if OOII=="\77\117\114\100\101\114\101\114"then _0II=true end if OOII=="\83\104\101\114\105\102\102"then IIlI=true end end end if _0II and IIlI then _lO=true end for OII,O0l in ipairs(
+lIlI)do local OOII=O0l.role local _IlI=OOII~=nil and llO[OOII]if OOII=="\73\110\110\111\99\101\110\116"and not _lO then _IlI=false end if _IlI then _lI(O0l.plr,OOII)else _Il(O0l.plr
+)end end end for OlII in pairs(IOO)do if not OlII.Parent then _Il(OlII)end end end local function _IO(O_lI)while IIO()and O_lI==lOO do local I00,_0l=pcall(IlO)if not I00 then warn(
+"\91\69\83\80\93\32"..tostring(_0l))end task.wait(OI)end if O_lI==lOO then lIl()IIl()end end local function _lII()lOO+=1 if IIO()then task.spawn(_IO,lOO)else lIl()IIl()end end local
+OO=0.4 local _l0=false local IIOI=16 local ___=50 local OO_=false local IO0=0 function OlI()if not _l0 then return end local _0I=_O.Character local Il_=_0I and _0I:FindFirstChildOfClass(
+"\72\117\109\97\110\111\105\100")if not Il_ then return end if not Il_.UseJumpPower then Il_.UseJumpPower=true end if Il_.WalkSpeed~=IIOI then Il_.WalkSpeed=IIOI end if Il_.JumpPower
+~=___ then Il_.JumpPower=___ end end local function Ol0(O_lI)while _l0 and O_lI==IO0 do OlI()task.wait(OO)end end local function lOlI()IO0+=1 if _l0 then OlI()task.spawn(Ol0,IO0)end
+end table.insert(O00,OlI)III.JumpRequest:Connect(function()if not _l0 or not OO_ then return end local _0I=_O.Character local Il_=_0I and _0I:FindFirstChildOfClass("\72\117\109\97\110\111\105\100"
+)if Il_ and not I_O then Il_:ChangeState(Enum.HumanoidStateType.Jumping)end end)local IlI=nil local function OIlI(_llI)if _llI and not IlI then IlI=_O.Idled:Connect(function()pcall(
+function()local _0lI=game:GetService("\86\105\114\116\117\97\108\85\115\101\114")_0lI:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)task.wait(1)_0lI:Button2Up(Vector2
+.new(0,0),workspace.CurrentCamera.CFrame)end)end)elseif not _llI and IlI then IlI:Disconnect()IlI=nil end end local function IlII(__lI)for OII,OlII in ipairs(l_:GetPlayers())do if OlII
+~=_O then local _0I=OlII.Character if _0I and _0I:FindFirstChild(__lI)then return OlII end end end return nil end local function l_lI(O0I,O0_)local I_II=I0O()if not I_II then lII:Warn(
+"\67\97\110\110\111\116\32\116\101\108\101\112\111\114\116","\78\111\32\99\104\97\114\97\99\116\101\114")return end if not O0I then lII:Warn("\67\97\110\110\111\116\32\116\101\108\101\112\111\114\116"
+,O0_.."\32\110\111\116\32\102\111\117\110\100")return end I_II.CFrame=O0I end _l:AddSection("\67\111\108\108\101\99\116\105\111\110",{Collapsible=true,Flag="\115\101\99\95\99\111\108\108\101\99\116\105\111\110"
+})local _OI _l:AddToggle({Name="\65\85\84\79\32\67\79\73\78",Description="\70\105\110\100\115\32\116\104\101\32\99\108\111\115\101\115\116\32\118\97\108\105\100\32\99\111\105\110\32\97\110\100\32\102\108\105\101\115\32\116\111\119\97\114\100\32\105\116\46"
+,Default=false,Flag="\97\117\116\111\95\99\111\105\110",Callback=function(_llI)if _OI then _OI:SetDisabled(not _llI)end lOI=_llI if _llI and not I__()then lII:Warn("\87\97\105\116\105\110\103"
+,"\84\104\101\32\103\97\109\101\32\104\97\115\32\110\111\116\32\115\101\116\32"..I.."\32\121\101\116\46\32\73\100\108\105\110\103\32\117\110\116\105\108\32\105\116\32\100\111\101\115\46"
+)end OOlI()end,})_OI=_l:AddToggle({Name="\65\85\84\79\32\82\69\83\69\84",Description="\82\101\115\101\116\115\32\111\110\99\101\32\116\104\101\32\98\97\103\32\105\115\32\102\117\108\108\32\111\114\32\116\104\101\32\109\97\112\32\105\115\32\111\117\116\32\111\102\32\99\111\105\110\115\46"
+,Default=false,Flag="\99\111\105\110\95\97\117\116\111\95\114\101\115\101\116",Callback=function(l0lI)OOI=l0lI if _OI then _OI:SetDisabled(not __II)end end,})_0:AddSection("\84\101\108\101\112\111\114\116\115"
+,{Collapsible=true,Flag="\115\101\99\95\116\101\108\101\112\111\114\116\115"})_0:AddButton({Name="\84\79\32\77\85\82\68\69\82\69\82",Description="\80\117\116\115\32\121\111\117\32\106\117\115\116\32\98\101\104\105\110\100\32\119\104\111\101\118\101\114\32\105\115\32\104\111\108\100\105\110\103\32\116\104\101\32\107\110\105\102\101\46"
+,Callback=function()local OlII=IlII("\75\110\105\102\101")local I_II=OlII and OlII.Character and OlII.Character:FindFirstChild("\72\117\109\97\110\111\105\100\82\111\111\116\80\97\114\116"
+)l_lI(I_II and I_II.CFrame*CFrame.new(0,0,3),"\77\117\114\100\101\114\101\114")end,})_0:AddButton({Name="\84\79\32\83\72\69\82\73\70\70",Description="\80\117\116\115\32\121\111\117\32\106\117\115\116\32\98\101\104\105\110\100\32\119\104\111\101\118\101\114\32\105\115\32\104\111\108\100\105\110\103\32\116\104\101\32\103\117\110\46"
+,Callback=function()local OlII=IlII("\71\117\110")if not OlII and l_0(Vector3.zero)then lII:Warn("\83\104\101\114\105\102\102\32\105\115\32\100\101\97\100","\84\104\101\32\103\117\110\32\105\115\32\111\110\32\116\104\101\32\102\108\111\111\114\46\32\85\115\101\32\84\79\32\71\85\78\32\68\82\79\80\46"
+)return end local I_II=OlII and OlII.Character and OlII.Character:FindFirstChild("\72\117\109\97\110\111\105\100\82\111\111\116\80\97\114\116")l_lI(I_II and I_II.CFrame*CFrame.new(
+0,0,3),"\83\104\101\114\105\102\102")end,})_0:AddButton({Name="\84\79\32\71\85\78\32\68\82\79\80",Description="\84\97\107\101\115\32\121\111\117\32\116\111\32\116\104\101\32\100\114\111\112\112\101\100\32\103\117\110\44\32\105\102\32\111\110\101\32\105\115\32\111\110\32\116\104\101\32\109\97\112\46"
+,Callback=function()local I_II=I0O()local I0l=I_II and l_0(I_II.Position)l_lI(I0l and CFrame.new(I0l.Position+Vector3.new(0,3,0)),"\71\117\110\32\100\114\111\112")end,})I_:AddSection(
+"\67\104\97\114\97\99\116\101\114",{Collapsible=true,Flag="\115\101\99\95\99\104\97\114\97\99\116\101\114"})local ll0 I_:AddToggle({Name="\77\79\86\69\77\69\78\84",Description="\65\112\112\108\105\101\115\32\116\104\101\32\118\97\108\117\101\115\32\98\101\108\111\119\32\97\110\100\32\114\101\115\116\111\114\101\115\32\116\104\101\109\32\97\102\116\101\114\32\97\32\114\101\115\112\97\119\110\46"
+,Default=false,Flag="\109\111\118\101\109\101\110\116\95\101\110\97\98\108\101\100",Callback=function(_llI)_l0=_llI if ll0 then ll0:SetDisabled(not _llI)end if _llI then lOlI()else
+local _0I=_O.Character local Il_=_0I and _0I:FindFirstChildOfClass("\72\117\109\97\110\111\105\100")if Il_ then Il_.WalkSpeed=16 Il_.JumpPower=50 end end end,})ll0=I_:AddGroup({Name
+="\84\85\78\73\78\71",Description="\72\111\108\100\115\32\101\97\99\104\32\118\97\108\117\101\32\97\103\97\105\110\115\116\32\116\104\101\32\103\97\109\101\39\115\32\111\119\110\46\32\68\101\102\97\117\108\116\115\32\97\114\101\32\49\54\32\97\110\100\32\53\48\46"
+,Rows={{Type="\83\108\105\100\101\114",Label="\87\97\108\107\32\83\112\101\101\100",Min=16,Max=120,Default=16,Flag="\119\97\108\107\95\115\112\101\101\100",Callback=function(l0lI)IIOI
+=l0lI OlI()end,},{Type="\83\108\105\100\101\114",Label="\74\117\109\112\32\80\111\119\101\114",Min=50,Max=200,Default=50,Flag="\106\117\109\112\95\112\111\119\101\114",Callback=function(
+l0lI)___=l0lI OlI()end,},{Type="\84\111\103\103\108\101",Label="\73\110\102\105\110\105\116\101\32\74\117\109\112",Default=false,Flag="\105\110\102\95\106\117\109\112",Callback=function(
+_llI)OO_=_llI end,},},})I_:AddSection("\67\111\110\110\101\99\116\105\111\110",{Collapsible=true,Flag="\115\101\99\95\99\111\110\110\101\99\116\105\111\110"})I_:AddToggle({Name="\65\78\84\73\32\65\70\75"
+,Description="\83\116\111\112\115\32\116\104\101\32\50\48\32\109\105\110\117\116\101\32\105\100\108\101\32\107\105\99\107\44\32\115\111\32\97\32\102\97\114\109\32\99\97\110\32\114\117\110\32\117\110\97\116\116\101\110\100\101\100\46"
+,Default=true,Flag="\97\110\116\105\95\97\102\107",Callback=OIlI,})_I:AddSection("\69\83\80",{Collapsible=true,Flag="\115\101\99\95\101\115\112"})local OlO _I:AddToggle({Name="\69\83\80"
+,Description="\72\105\103\104\108\105\103\104\116\115\32\116\104\101\32\115\101\108\101\99\116\101\100\32\114\111\108\101\115\32\116\104\114\111\117\103\104\32\119\97\108\108\115\46"
+,Default=false,Flag="\101\115\112\95\101\110\97\98\108\101\100",Callback=function(_llI)lIO=_llI if OlO then OlO:SetDisabled(not _llI)end _lII()end,})OlO=_I:AddMultiDropdown({Name="\82\79\76\69\83"
+,Description="\83\101\108\101\99\116\115\32\119\104\105\99\104\32\114\111\108\101\115\32\97\114\101\32\104\105\103\104\108\105\103\104\116\101\100\32\97\110\100\32\116\97\103\103\101\100\46"
+,Options={"\77\117\114\100\101\114\101\114","\83\104\101\114\105\102\102","\73\110\110\111\99\101\110\116","\71\117\110\32\68\114\111\112"},Default={"\77\117\114\100\101\114\101\114"
+,"\83\104\101\114\105\102\102","\71\117\110\32\68\114\111\112"},Placeholder="\78\111\110\101\32\115\101\108\101\99\116\101\100",Flag="\101\115\112\95\114\111\108\101\115",Callback=
+function(OI0)for OOII in pairs(llO)do llO[OOII]=false end for OII,OOII in ipairs(OI0)do llO[OOII]=true end if OlO then OlO:SetDisabled(not lIO)end _lII()end,})lII:ApplyDefaults()
